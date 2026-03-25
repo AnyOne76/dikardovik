@@ -162,7 +162,11 @@ export default function EditHistoryPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => router.push("/history")}
+                  onClick={() => {
+                    // В режиме предпросмотра "Назад" возвращает в редактирование на той же странице.
+                    if (showPreview) setShowPreview(false);
+                    else router.push("/history");
+                  }}
               className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
             >
               Назад
