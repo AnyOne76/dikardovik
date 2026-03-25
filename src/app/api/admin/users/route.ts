@@ -35,3 +35,21 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      login: true,
+      role: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json({ users });
+}
+
