@@ -28,6 +28,7 @@ export default function AdminUsersPage() {
       const r = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ login, password }),
       });
       const data = await r.json().catch(() => ({}));

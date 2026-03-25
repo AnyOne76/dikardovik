@@ -25,6 +25,7 @@ export default function AccountPage() {
       const r = await fetch("/api/account/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ oldPassword, newPassword }),
       });
       const data = await r.json().catch(() => ({}));
