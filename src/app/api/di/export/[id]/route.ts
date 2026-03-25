@@ -23,9 +23,12 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 
   const payload = instructionSchema.parse(row.templateJson);
   const buffer = await exportInstructionToDocx(payload);
+  // Next.js types for NextResponse body are stricter in some TS configs.
+  // Convert Node Buffer -> Uint8Array to satisfy BodyInit.
+  const body = new Uint8Array(buffer);
   const safeName = row.jobTitle.name.replace(/[^\p{L}\p{N}\s_-]/gu, "_");
 
-  return new NextResponse(buffer, {
+  return new NextResponse(body, {
     status: 200,
     headers: {
       "Content-Type":
