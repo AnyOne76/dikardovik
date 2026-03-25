@@ -185,7 +185,8 @@ export default function EditHistoryPage() {
 
       {!loading && payload && (
         <div className="mt-4 grid gap-4">
-          <section className="rounded-3xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
+          {!showPreview && (
+            <section className="rounded-3xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <h2 className="text-lg font-semibold text-zinc-900">Параметры и текст</h2>
               <div className="flex flex-wrap items-center gap-2">
@@ -426,6 +427,7 @@ export default function EditHistoryPage() {
 
             {error && <p className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           </section>
+          )}
 
           {showPreview && (
             <section className="rounded-3xl border border-orange-100 bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
