@@ -8,6 +8,51 @@ import { isDirectorRole } from "@/lib/di-rules";
 const MANDATORY_LINEAR_SUBORDINATION_FALLBACK = "Подчиняется непосредственному руководителю подразделения";
 const MANDATORY_DIRECTOR_SUBORDINATION_TEXT = "Генеральному директору";
 
+function normalizeTerminology(text: string): string {
+  return String(text ?? "")
+    .replace(/Начальник/g, "Руководитель")
+    .replace(/начальник/g, "руководитель")
+    .replace(/\bруководительу\b/gi, "руководителю");
+}
+
+function normalizePayloadTerminology(payload: unknown): typeof payload {
+  const p = structuredClone(payload);
+  // template meta
+  if (p?.templateMeta) {
+    p.templateMeta.approvedBy = normalizeTerminology(p.templateMeta.approvedBy);
+    p.templateMeta.positionName = normalizeTerminology(p.templateMeta.positionName);
+    p.templateMeta.departmentName = normalizeTerminology(p.templateMeta.departmentName);
+  }
+
+  // general
+  if (p?.sections?.general) {
+    for (const k of [
+      "requiredQualification",
+      "subordination",
+      "hiringProcedure",
+      "substitutionProcedure",
+      "regulatoryDocuments",
+      "localRegulations",
+      "employeeMustKnow",
+    ] as const) {
+      p.sections.general[k] = (p.sections.general[k] ?? []).map((x: string) => normalizeTerminology(x));
+    }
+  }
+
+  // duties/rights/responsibility
+  if (p?.sections?.duties?.items)
+    p.sections.duties.items = p.sections.duties.items.map((x: string) => normalizeTerminology(x));
+  if (p?.sections?.rights?.items)
+    p.sections.rights.items = p.sections.rights.items.map((x: string) => normalizeTerminology(x));
+  if (p?.sections?.responsibility?.items)
+    p.sections.responsibility.items = p.sections.responsibility.items.map((x: string) => normalizeTerminology(x));
+
+  // signatures
+  if (p?.signatures?.coordinator) p.signatures.coordinator = normalizeTerminology(p.signatures.coordinator);
+
+  return p;
+}
+
 function cleanSubordinationForEdit(input: string[]): string[] {
   const removalPatterns: RegExp[] = [
     // Wrong content for "Подчиненность": sometimes LLM puts substitution clause here.
@@ -72,13 +117,25 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
   const isOwner = row.generationRun?.userId === session.user.id;
   if (!isAdmin && !isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  let safeTemplateJson = row.templateJson;
+  let safeFinalText = row.finalText;
+  try {
+    const payload = instructionSchema.parse(row.templateJson);
+    assertStrictStructure(payload);
+    const normalized = normalizePayloadTerminology(payload);
+    safeTemplateJson = normalized;
+    safeFinalText = toPrintableText(normalized);
+  } catch {
+    // If older data is malformed, keep original payload.
+  }
+
   return NextResponse.json({
     id: row.id,
     version: row.version,
     createdAt: row.createdAt,
     jobTitleName: row.jobTitle.name,
-    templateJson: row.templateJson,
-    finalText: row.finalText,
+    templateJson: safeTemplateJson,
+    finalText: safeFinalText,
   });
 }
 
@@ -123,6 +180,14 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   if (isDirectorRole(payload.templateMeta.positionName)) {
     payload.sections.general.subordination = [MANDATORY_DIRECTOR_SUBORDINATION_TEXT];
   }
+
+  // Enforce terminology rules even when user edited text manually.
+  const normalized = normalizePayloadTerminology(payload) as typeof payload;
+  payload.templateMeta.positionName = normalized.templateMeta.positionName;
+  payload.templateMeta.departmentName = normalized.templateMeta.departmentName;
+  payload.templateMeta.approvedBy = normalized.templateMeta.approvedBy;
+  payload.sections = normalized.sections;
+  payload.signatures = normalized.signatures;
 
   const finalText = toPrintableText(payload);
 
