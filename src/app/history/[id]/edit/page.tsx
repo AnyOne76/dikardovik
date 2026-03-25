@@ -163,6 +163,7 @@ export default function EditHistoryPage() {
               </div>
             </div>
 
+            <p className="mt-3 text-xs text-zinc-500">Одна строка в полях = один пункт.</p>
             {(
               [
                 {
@@ -284,11 +285,10 @@ export default function EditHistoryPage() {
                   onChange={(e) => block.onChange(textToItems(e.target.value))}
                   className="w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-zinc-500">Одна строка = один пункт.</p>
               </div>
             ))}
 
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="mt-6 grid gap-4">
               {[
                 { label: "Работник обязан", value: payload.sections.duties.items, key: "duties.items" as const },
                 { label: "Работник имеет право", value: payload.sections.rights.items, key: "rights.items" as const },
@@ -298,7 +298,7 @@ export default function EditHistoryPage() {
                   key: "responsibility.items" as const,
                 },
               ].map((block) => (
-                <div key={block.key} className="col-span-1">
+                <div key={block.key}>
                   <label className="mb-2 block text-sm font-medium text-zinc-700">{block.label}</label>
                   <textarea
                     rows={6}
@@ -324,7 +324,6 @@ export default function EditHistoryPage() {
                     }}
                     className="w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-zinc-500">Одна строка = один пункт.</p>
                 </div>
               ))}
             </div>
