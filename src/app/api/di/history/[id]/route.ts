@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { assertStrictStructure, instructionSchema, toPrintableText } from "@/lib/di-contract";
+import { assertStrictStructure, instructionSchema, toPrintableText, type InstructionPayload } from "@/lib/di-contract";
 import { isDirectorRole } from "@/lib/di-rules";
 
 const MANDATORY_LINEAR_SUBORDINATION_FALLBACK = "Подчиняется непосредственному руководителю подразделения";
