@@ -40,6 +40,27 @@ function cleanGeneratedText(value: string): string {
     .replace(/\s+([,.;:!?])/g, "$1");
 }
 
+function cleanSubordinationLines(lines: string[]): string[] {
+  const removalPatterns: RegExp[] = [
+    // Wrong orientation: "в прямом подчинении находится ..." (means employee has subordinates)
+    /в\s*прямом\s*подчинени[еи]\s*находится/i,
+    /в\s*подчинении\s*находится/i,
+    /в\s*его\s*подчинении/i,
+    // Another wrong orientation: "ему подчиняются/подчинен(а)"
+    /ему\s*подчиня(ют|ются|ется)/i,
+    /ему\s*подчинен(у|а|ы)/i,
+    // Wrong content for "Подчиненность": sometimes LLM puts substitution clause here.
+    /на\s*время\s*отсутствия/i,
+    /функц(ии|ия)\s*на\s*время\s*отсутствия/i,
+    /исполняет\s+назначенн(о(е|ый)|ая|ый|ую|ого|ых)\s+лиц(о|а)/i,
+  ];
+
+  return (lines ?? [])
+    .map((s) => cleanGeneratedText(s))
+    .filter(Boolean)
+    .filter((line) => !removalPatterns.some((re) => re.test(line)));
+}
+
 function fallbackPayload(input: GenerationInput): InstructionPayload {
   const generalItems = input.facts.slice(0, 5);
   const dutiesItems = input.facts.slice(5, 15);
@@ -191,9 +212,11 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
     pool,
     "Квалификационные требования определяются работодателем",
   );
+  // Ensure "Подчиненность" doesn't accidentally include "employee has subordinates" statements.
+  safe.sections.general.subordination = cleanSubordinationLines(safe.sections.general.subordination);
   safe.sections.general.subordination = padList(
     safe.sections.general.subordination,
-    2,
+    1,
     pool,
     "Подчиняется непосредственному руководителю подразделения",
   );
