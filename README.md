@@ -41,6 +41,14 @@ git remote add origin https://github.com/ВАШ_ЛОГИН/ВАШ_РЕПОЗИТ
 git push -u origin main
 ```
 
+Либо из корня проекта в PowerShell (после создания пустого репозитория на GitHub):
+
+```powershell
+.\scripts\push-to-github.ps1 -RepoUrl "https://github.com/ВАШ_ЛОГИН/ВАШ_РЕПОЗИТОРИЙ.git"
+```
+
+При запросе пароля при HTTPS чаще всего нужен **Personal Access Token** (не пароль от аккаунта).
+
 3. **Никогда не коммитьте** файл `.env` и реальные ключи. В репозитории должен быть только `.env.example`.
 4. На сервере создайте `.env` вручную или через панель/секреты.
 
