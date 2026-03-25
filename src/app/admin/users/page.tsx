@@ -81,7 +81,19 @@ export default function AdminUsersPage() {
   }
 
   async function resetPassword(targetLogin: string) {
-    if (!confirm(`Сбросить пароль для ${targetLogin}? Новый пароль будет показан один раз.`)) return;
+    const typed = prompt(
+      `Сбросить пароль для ${targetLogin}.\nВведите новый пароль (min 6). Оставьте пустым для генерации.`,
+      "",
+    );
+    // If admin cancelled the prompt -> do nothing.
+    if (typed === null) return;
+
+    const trimmed = typed.trim();
+    if (trimmed.length === 0) {
+      if (!confirm(`Сгенерировать новый пароль для ${targetLogin} и показать один раз?`)) return;
+    } else {
+      if (!confirm(`Установить новый пароль для ${targetLogin}?`)) return;
+    }
     setResetBusyLogin(targetLogin);
     setLastReset(null);
     try {
@@ -89,12 +101,16 @@ export default function AdminUsersPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ login: targetLogin }),
+        body: JSON.stringify({ login: targetLogin, ...(trimmed ? { newPassword: trimmed } : {}) }),
       });
       const data = (await r.json().catch(() => ({}))) as { ok?: boolean; password?: string; error?: string };
       if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Ошибка сброса");
-      if (typeof data.password !== "string" || data.password.length === 0) throw new Error("Пароль не получен");
-      setLastReset({ login: targetLogin, password: data.password });
+      if (typeof data.password === "string" && data.password.length > 0) {
+        setLastReset({ login: targetLogin, password: data.password });
+      } else {
+        setLastReset(null);
+        alert("Пароль установлен.");
+      }
       // refresh list so admin sees current users (no need for password, but keeps UX consistent)
       setUsersBusy(true);
       const r2 = await fetch("/api/admin/users", { credentials: "include" });

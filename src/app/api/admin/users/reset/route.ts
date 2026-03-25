@@ -8,6 +8,7 @@ import { z } from "zod";
 
 const bodySchema = z.object({
   login: z.string().min(3),
+  newPassword: z.string().min(6).optional(),
 });
 
 function generatePassword(len = 12): string {
@@ -33,15 +34,19 @@ export async function POST(request: Request) {
   const user = await prisma.user.findUnique({ where: { login: parsed.data.login } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const newPassword = generatePassword(12);
-  const hash = await bcrypt.hash(newPassword, 10);
+  const providedPassword = parsed.data.newPassword?.trim();
+  const finalPassword = providedPassword ? providedPassword : generatePassword(12);
+  const hash = await bcrypt.hash(finalPassword, 10);
 
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash: hash },
   });
 
-  // Return plaintext once so admin can copy it. We never store plaintext.
-  return NextResponse.json({ ok: true, password: newPassword });
+  // If password was generated (not provided), return it once so admin can copy it.
+  if (providedPassword) {
+    return NextResponse.json({ ok: true });
+  }
+  return NextResponse.json({ ok: true, password: finalPassword });
 }
 
