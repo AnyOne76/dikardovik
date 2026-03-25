@@ -139,6 +139,7 @@ function normalizeTerminology(text: string): string {
   return cleanGeneratedText(text)
     .replace(/Начальник/g, "Руководитель")
     .replace(/начальник/g, "руководитель")
+    .replace(/\bруководительу\b/gi, "руководителю")
     .replace(/\bруководителю(\S)/g, "руководителю $1")
     .replace(/\bруководителя(\S)/g, "руководителя $1");
 }
