@@ -12,6 +12,7 @@ export default function AdminUsersPage() {
   const [usersBusy, setUsersBusy] = useState(false);
   const [resetBusyLogin, setResetBusyLogin] = useState<string | null>(null);
   const [lastReset, setLastReset] = useState<{ login: string; password: string } | null>(null);
+  const [actionBusyLogin, setActionBusyLogin] = useState<string | null>(null);
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -43,6 +44,18 @@ export default function AdminUsersPage() {
     })();
   }, [role]);
 
+  async function reloadUsers() {
+    setUsersBusy(true);
+    try {
+      const r = await fetch("/api/admin/users", { credentials: "include" });
+      const d = (await r.json().catch(() => ({}))) as { users?: DbUser[]; error?: string };
+      if (!r.ok) throw new Error(typeof d.error === "string" ? d.error : "Ошибка загрузки");
+      setUsers(Array.isArray(d.users) ? d.users : []);
+    } finally {
+      setUsersBusy(false);
+    }
+  }
+
   async function createUser() {
     setBusy(true);
     setError("");
@@ -59,8 +72,7 @@ export default function AdminUsersPage() {
       setOk("Пользователь создан.");
       setLogin("");
       setPassword("");
-      // reload list
-      setUsers((prev) => prev); // no-op; list will be refreshed on next action
+      await reloadUsers();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка");
     } finally {
@@ -93,6 +105,55 @@ export default function AdminUsersPage() {
     } finally {
       setResetBusyLogin(null);
       setUsersBusy(false);
+    }
+  }
+
+  async function deleteUser(targetLogin: string) {
+    if (!confirm(`Удалить пользователя "${targetLogin}"?`)) return;
+    setActionBusyLogin(targetLogin);
+    try {
+      const r = await fetch("/api/admin/users/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ login: targetLogin }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof d.error === "string" ? d.error : "Ошибка удаления");
+      setLastReset(null);
+      await reloadUsers();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Ошибка удаления");
+    } finally {
+      setActionBusyLogin(null);
+    }
+  }
+
+  async function changeLogin(targetLogin: string) {
+    const newLogin = prompt("Новый логин (email):", targetLogin);
+    if (!newLogin) return;
+    const trimmed = newLogin.trim();
+    if (trimmed.length < 3) {
+      alert("Логин слишком короткий");
+      return;
+    }
+    if (!confirm(`Сменить логин "${targetLogin}" на "${trimmed}"?`)) return;
+
+    setActionBusyLogin(targetLogin);
+    try {
+      const r = await fetch("/api/admin/users/change-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ login: targetLogin, newLogin: trimmed }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof d.error === "string" ? d.error : "Ошибка смены логина");
+      await reloadUsers();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Ошибка смены логина");
+    } finally {
+      setActionBusyLogin(null);
     }
   }
 
@@ -165,7 +226,7 @@ export default function AdminUsersPage() {
                     <th className="border-b border-orange-100 bg-orange-50 px-3 py-2 text-left font-medium text-zinc-700">Login</th>
                     <th className="border-b border-orange-100 bg-orange-50 px-3 py-2 text-left font-medium text-zinc-700">Role</th>
                     <th className="border-b border-orange-100 bg-orange-50 px-3 py-2 text-left font-medium text-zinc-700">Создан</th>
-                    <th className="border-b border-orange-100 bg-orange-50 px-3 py-2 text-left font-medium text-zinc-700">Пароль</th>
+                    <th className="border-b border-orange-100 bg-orange-50 px-3 py-2 text-left font-medium text-zinc-700">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -177,14 +238,32 @@ export default function AdminUsersPage() {
                         {new Date(u.createdAt).toLocaleString()}
                       </td>
                       <td className="border-b border-orange-50 px-3 py-2">
-                        <button
-                          type="button"
-                          disabled={resetBusyLogin === u.login}
-                          onClick={() => resetPassword(u.login)}
-                          className="inline-flex h-9 items-center justify-center rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:opacity-50"
-                        >
-                          {resetBusyLogin === u.login ? "Сброс..." : "Сбросить"}
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={resetBusyLogin === u.login || actionBusyLogin === u.login}
+                            onClick={() => resetPassword(u.login)}
+                            className="inline-flex h-9 items-center justify-center rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:opacity-50"
+                          >
+                            {resetBusyLogin === u.login ? "Сброс..." : "Сбросить пароль"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionBusyLogin === u.login}
+                            onClick={() => changeLogin(u.login)}
+                            className="inline-flex h-9 items-center justify-center rounded-xl border border-blue-200 bg-white px-3 text-sm font-medium text-blue-700 transition hover:bg-blue-50 disabled:opacity-50"
+                          >
+                            Сменить логин
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionBusyLogin === u.login}
+                            onClick={() => deleteUser(u.login)}
+                            className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 bg-white px-3 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                          >
+                            Удалить
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
