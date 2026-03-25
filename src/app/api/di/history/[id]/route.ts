@@ -15,41 +15,30 @@ function normalizeTerminology(text: string): string {
     .replace(/\bруководительу\b/gi, "руководителю");
 }
 
-function normalizePayloadTerminology(payload: unknown): typeof payload {
-  const p = structuredClone(payload);
-  // template meta
-  if (p?.templateMeta) {
-    p.templateMeta.approvedBy = normalizeTerminology(p.templateMeta.approvedBy);
-    p.templateMeta.positionName = normalizeTerminology(p.templateMeta.positionName);
-    p.templateMeta.departmentName = normalizeTerminology(p.templateMeta.departmentName);
-  }
+function normalizePayloadTerminology(payload: InstructionPayload): InstructionPayload {
+  const p = structuredClone(payload) as InstructionPayload;
 
-  // general
-  if (p?.sections?.general) {
-    for (const k of [
-      "requiredQualification",
-      "subordination",
-      "hiringProcedure",
-      "substitutionProcedure",
-      "regulatoryDocuments",
-      "localRegulations",
-      "employeeMustKnow",
-    ] as const) {
-      p.sections.general[k] = (p.sections.general[k] ?? []).map((x: string) => normalizeTerminology(x));
-    }
-  }
+  p.templateMeta.approvedBy = normalizeTerminology(p.templateMeta.approvedBy);
+  p.templateMeta.positionName = normalizeTerminology(p.templateMeta.positionName);
+  p.templateMeta.departmentName = normalizeTerminology(p.templateMeta.departmentName);
 
-  // duties/rights/responsibility
-  if (p?.sections?.duties?.items)
-    p.sections.duties.items = p.sections.duties.items.map((x: string) => normalizeTerminology(x));
-  if (p?.sections?.rights?.items)
-    p.sections.rights.items = p.sections.rights.items.map((x: string) => normalizeTerminology(x));
-  if (p?.sections?.responsibility?.items)
-    p.sections.responsibility.items = p.sections.responsibility.items.map((x: string) => normalizeTerminology(x));
+  p.sections.general.requiredQualification = p.sections.general.requiredQualification.map((x) =>
+    normalizeTerminology(x),
+  );
+  p.sections.general.subordination = p.sections.general.subordination.map((x) => normalizeTerminology(x));
+  p.sections.general.hiringProcedure = p.sections.general.hiringProcedure.map((x) => normalizeTerminology(x));
+  p.sections.general.substitutionProcedure = p.sections.general.substitutionProcedure.map((x) =>
+    normalizeTerminology(x),
+  );
+  p.sections.general.regulatoryDocuments = p.sections.general.regulatoryDocuments.map((x) => normalizeTerminology(x));
+  p.sections.general.localRegulations = p.sections.general.localRegulations.map((x) => normalizeTerminology(x));
+  p.sections.general.employeeMustKnow = p.sections.general.employeeMustKnow.map((x) => normalizeTerminology(x));
 
-  // signatures
-  if (p?.signatures?.coordinator) p.signatures.coordinator = normalizeTerminology(p.signatures.coordinator);
+  p.sections.duties.items = p.sections.duties.items.map((x) => normalizeTerminology(x));
+  p.sections.rights.items = p.sections.rights.items.map((x) => normalizeTerminology(x));
+  p.sections.responsibility.items = p.sections.responsibility.items.map((x) => normalizeTerminology(x));
 
+  p.signatures.coordinator = normalizeTerminology(p.signatures.coordinator);
   return p;
 }
 
