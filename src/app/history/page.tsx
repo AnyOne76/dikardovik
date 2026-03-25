@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Item = { id: string; title: string; version: number; createdAt: string };
 
@@ -46,7 +47,8 @@ export default function HistoryPage() {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Ошибка удаления");
       setSelected((s) => {
-        const { [id]: _, ...rest } = s;
+        const rest = { ...s };
+        delete rest[id];
         return rest;
       });
       await loadHistory();
@@ -90,12 +92,12 @@ export default function HistoryPage() {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900">История генераций</h1>
             <p className="mt-2 text-sm text-zinc-600">Быстрый доступ к последним версиям документов и экспорту в DOCX.</p>
           </div>
-          <a
+          <Link
             href="/"
             className="inline-flex h-10 shrink-0 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-700 transition hover:-translate-y-0.5 hover:bg-orange-50"
           >
             На главную
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -154,6 +156,12 @@ export default function HistoryPage() {
                 className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-100"
               >
                 Скачать DOCX
+              </a>
+              <a
+                href={`/history/${item.id}/edit`}
+                className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-50"
+              >
+                Открыть в редакторе
               </a>
               <button
                 type="button"
