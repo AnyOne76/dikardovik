@@ -177,8 +177,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const isOwner = row.generationRun?.userId === session.user.id;
   if (!isAdmin && !isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const body = await request.json().catch(() => ({} as { section?: unknown }));
+  const body = await request.json().catch(() => ({} as { section?: unknown; templateJson?: unknown }));
   const section = String(body?.section || "").trim() as SectionKey;
+  const clientTemplateJson = body?.templateJson;
 
   const allowed: SectionKey[] = [
     "requiredQualification",
@@ -204,10 +205,10 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
   if (!apiKey) return NextResponse.json({ error: "OpenRouter API key missing" }, { status: 500 });
 
-  const rawPayload = row.templateJson;
   let payload: InstructionPayload;
   try {
-    payload = instructionSchema.parse(rawPayload);
+    const base = clientTemplateJson ?? row.templateJson;
+    payload = instructionSchema.parse(base);
     assertStrictStructure(payload);
   } catch {
     return NextResponse.json({ error: "Invalid templateJson" }, { status: 400 });

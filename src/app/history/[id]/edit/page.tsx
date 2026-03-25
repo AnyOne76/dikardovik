@@ -134,7 +134,7 @@ export default function EditHistoryPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ section }),
+        body: JSON.stringify({ section, templateJson: payload }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Ошибка перегенерации");
