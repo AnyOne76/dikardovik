@@ -22,6 +22,7 @@ export default function EditHistoryPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [regenerating, setRegenerating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [baseId, setBaseId] = useState<string | null>(null);
@@ -83,6 +84,27 @@ export default function EditHistoryPage() {
       setError(e instanceof Error ? e.message : "Ошибка сохранения");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function regenerate(section: string) {
+    if (!id || !payload) return;
+    setRegenerating(section);
+    setError(null);
+    try {
+      const r = await fetch(`/api/di/history/${id}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ section }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Ошибка перегенерации");
+      if (data.templateJson) setPayload(data.templateJson as InstructionPayload);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка перегенерации");
+    } finally {
+      setRegenerating(null);
     }
   }
 
@@ -169,6 +191,7 @@ export default function EditHistoryPage() {
                 {
                   label: "Требуемая квалификация и стаж работы по данной должности",
                   value: payload.sections.general.requiredQualification,
+                  section: "requiredQualification",
                   onChange: (next: string[]) =>
                     setPayload((p) =>
                       p
@@ -185,6 +208,7 @@ export default function EditHistoryPage() {
                 {
                   label: "Подчиненность (только кому подчиняется)",
                   value: payload.sections.general.subordination,
+                  section: "subordination",
                   onChange: (next: string[]) =>
                     setPayload((p) =>
                       p
@@ -198,6 +222,7 @@ export default function EditHistoryPage() {
                 {
                   label: "Прием на работу",
                   value: payload.sections.general.hiringProcedure,
+                  section: "hiringProcedure",
                   onChange: (next: string[]) =>
                     setPayload((p) =>
                       p
@@ -214,6 +239,7 @@ export default function EditHistoryPage() {
                 {
                   label: "Замещение на время отсутствия",
                   value: payload.sections.general.substitutionProcedure,
+                  section: "substitutionProcedure",
                   onChange: (next: string[]) =>
                     setPayload((p) =>
                       p
@@ -230,6 +256,7 @@ export default function EditHistoryPage() {
                 {
                   label: "Нормативные документы, которыми руководствуется в своей деятельности",
                   value: payload.sections.general.regulatoryDocuments,
+                  section: "regulatoryDocuments",
                   onChange: (next: string[]) =>
                     setPayload((p) =>
                       p
@@ -246,6 +273,7 @@ export default function EditHistoryPage() {
                 {
                   label: "Локально-нормативные акты",
                   value: payload.sections.general.localRegulations,
+                  section: "localRegulations",
                   onChange: (next: string[]) =>
                     setPayload((p) =>
                       p
@@ -262,6 +290,7 @@ export default function EditHistoryPage() {
                 {
                   label: "Работник должен знать",
                   value: payload.sections.general.employeeMustKnow,
+                  section: "employeeMustKnow",
                   onChange: (next: string[]) =>
                     setPayload((p) =>
                       p
@@ -278,7 +307,17 @@ export default function EditHistoryPage() {
               ] as const
             ).map((block) => (
               <div key={block.label} className="mt-4">
-                <label className="mb-2 block text-sm font-medium text-zinc-700">{block.label}</label>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="block text-sm font-medium text-zinc-700">{block.label}</label>
+                  <button
+                    type="button"
+                    disabled={saving || regenerating === block.section}
+                    onClick={() => regenerate(block.section)}
+                    className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:opacity-50"
+                  >
+                    {regenerating === block.section ? "Перегенерируем..." : "Перегенерировать"}
+                  </button>
+                </div>
                 <textarea
                   rows={4}
                   value={itemsToText(block.value)}
@@ -290,16 +329,27 @@ export default function EditHistoryPage() {
 
             <div className="mt-6 grid gap-4">
               {[
-                { label: "Работник обязан", value: payload.sections.duties.items, key: "duties.items" as const },
-                { label: "Работник имеет право", value: payload.sections.rights.items, key: "rights.items" as const },
+                { label: "Работник обязан", value: payload.sections.duties.items, section: "duties.items" as const, key: "duties.items" as const },
+                { label: "Работник имеет право", value: payload.sections.rights.items, section: "rights.items" as const, key: "rights.items" as const },
                 {
                   label: "Работник несет ответственность за",
                   value: payload.sections.responsibility.items,
+                  section: "responsibility.items" as const,
                   key: "responsibility.items" as const,
                 },
               ].map((block) => (
                 <div key={block.key}>
-                  <label className="mb-2 block text-sm font-medium text-zinc-700">{block.label}</label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-sm font-medium text-zinc-700">{block.label}</label>
+                    <button
+                      type="button"
+                      disabled={saving || regenerating === block.section}
+                      onClick={() => regenerate(block.section)}
+                      className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:opacity-50"
+                    >
+                      {regenerating === block.section ? "Перегенерируем..." : "Перегенерировать"}
+                    </button>
+                  </div>
                   <textarea
                     rows={6}
                     value={itemsToText(block.value)}
