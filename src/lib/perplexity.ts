@@ -32,9 +32,9 @@ function splitSentences(text: string): string[] {
     .filter((s) => s.length > 20);
 }
 
-async function fetchAssistentusFacts(jobTitle: string): Promise<string[]> {
-  const query = encodeURIComponent(`должностная инструкция ${jobTitle}`);
-  const searchUrl = `https://assistentus.ru/?s=${query}`;
+async function fetchAssistentusFacts(query: string): Promise<string[]> {
+  const q = encodeURIComponent(query);
+  const searchUrl = `https://assistentus.ru/?s=${q}`;
   const commonHeaders = {
     "User-Agent": "Mozilla/5.0 KadrovikBot/1.0",
     Accept: "text/html,application/xhtml+xml",
@@ -113,7 +113,7 @@ async function queryPerplexity(apiKey: string, model: string, prompt: string): P
 export async function fetchPerplexityFacts(jobTitle: string): Promise<PerplexityResult> {
   const apiKey = (process.env.PERPLEXITY_API_KEY ?? "").trim();
   const model = process.env.PERPLEXITY_MODEL || "sonar-pro";
-  const assistentusLines = await fetchAssistentusFacts(jobTitle).catch(() => []);
+  const assistentusLines = await fetchAssistentusFacts(`должностная инструкция ${jobTitle}`).catch(() => []);
   const targetCount = 90;
   const minAssistentusOnly = 40;
 
@@ -165,6 +165,51 @@ export async function fetchPerplexityFacts(jobTitle: string): Promise<Perplexity
   }
   if (snippets.length < minAssistentusOnly && !apiKey) {
     throw new Error("Недостаточно данных с assistentus и отсутствует PERPLEXITY_API_KEY для добора.");
+  }
+
+  return { snippets, model };
+}
+
+export async function fetchPerplexityFactsForSection(opts: {
+  jobTitle: string;
+  department?: string;
+  sectionHuman: string;
+  desiredCount: number;
+}): Promise<PerplexityResult> {
+  const apiKey = (process.env.PERPLEXITY_API_KEY ?? "").trim();
+  const model = process.env.PERPLEXITY_MODEL || "sonar-pro";
+
+  const query = `должностная инструкция ${opts.jobTitle}${opts.department ? ` ${opts.department}` : ""}`;
+  const assistentusLines = await fetchAssistentusFacts(query).catch(() => []);
+
+  const targetCount = Math.max(opts.desiredCount + 6, opts.desiredCount);
+  const base = assistentusLines
+    .filter((s, idx, arr) => arr.indexOf(s) === idx)
+    .slice(0, targetCount);
+
+  // Если нет Perplexity API key — используем только assistentus.
+  if (!apiKey || base.length >= targetCount) {
+    return { snippets: base.slice(0, targetCount), model };
+  }
+
+  const perplexityLines = await queryPerplexity(
+    apiKey,
+    model,
+    [
+      `Собери данные для должности "${opts.jobTitle}" в структурном подразделении "${opts.department ?? ""}".`,
+      `Нужны пункты для секции: ${opts.sectionHuman}`,
+      `Верни МИНИМУМ ${targetCount} отдельных строк.`,
+      "Каждая строка — законченная мысль без нумерации и без вводных фраз.",
+      "Если в источнике встречаются формулировки 'подчиняется', не подставляй смысл наоборот.",
+    ].join("\n"),
+  ).catch(() => []);
+
+  const snippets = [...base, ...perplexityLines]
+    .filter((s, idx, arr) => arr.indexOf(s) === idx)
+    .slice(0, targetCount);
+
+  if (!snippets.length) {
+    throw new Error("Не удалось получить данные для секции ни с assistentus, ни через Perplexity.");
   }
 
   return { snippets, model };

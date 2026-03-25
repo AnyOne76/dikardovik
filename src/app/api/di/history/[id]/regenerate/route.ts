@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { assertStrictStructure, instructionSchema, type InstructionPayload } from "@/lib/di-contract";
 import { isDirectorRole, isLeadershipRole, isTailNoteLine } from "@/lib/di-rules";
 import { loadEnvConfig } from "@next/env";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-meta";
+import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
 
 loadEnvConfig(process.cwd());
 
@@ -190,6 +193,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   ];
   if (!allowed.includes(section)) return NextResponse.json({ error: "Invalid section" }, { status: 400 });
 
+  const ip = getClientIp(request);
+  const ok = checkRateLimit(`regen:${id}:${section}:${ip}`, 6, 60_000);
+  if (!ok) {
+    return NextResponse.json({ error: "Too many regenerate requests" }, { status: 429 });
+  }
+
   const apiKey = process.env.OPENROUTER_API_KEY;
   const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
   if (!apiKey) return NextResponse.json({ error: "OpenRouter API key missing" }, { status: 500 });
@@ -253,6 +262,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
                       ? "Работник имеет право"
                       : "Работник несет ответственность за";
 
+  let currentFactsText = "";
+  try {
+    const facts = await fetchPerplexityFactsForSection({
+      jobTitle: payload.templateMeta.positionName,
+      department: payload.templateMeta.departmentName,
+      sectionHuman,
+      desiredCount,
+    });
+    currentFactsText = facts.snippets.join("\n").slice(0, 6000);
+  } catch (e) {
+    // Search must not block editing; fallback to generation from existing wording.
+    console.warn("Section facts fetch failed", e);
+    currentFactsText = "";
+  }
+
   const mandatoryRules = [
     "Верни ТОЛЬКО JSON без пояснений.",
     `В массиве items должно быть ровно ${desiredCount} строк.`,
@@ -280,7 +304,10 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   }
 
   const prompt = `Перегенерируй пункты для секции "${sectionHuman}".
-Текущие пункты:
+Данные из поиска (справка):
+${currentFactsText || "—"}
+
+Текущие пункты (как стиль/формулировки):
 ${itemsAsText}
 
 Должность: ${payload.templateMeta.positionName}
