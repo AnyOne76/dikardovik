@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  login        String   @unique
+  passwordHash String
+  role         String   @default("hr")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  runs         GenerationRun[]
+}
+
+model JobTitle {
+  id          String               @id @default(cuid())
+  name        String               @unique
+  normalized  String               @unique
+  synonyms    String               @default("")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  versions    InstructionVersion[]
+  linksFrom   InstructionLink[]    @relation("linkSource")
+  linksTo     InstructionLink[]    @relation("linkTarget")
+}
+
+model InstructionVersion {
+  id             String   @id @default(cuid())
+  jobTitleId     String
+  generationRunId String?
+  version        Int
+  templateJson   Json
+  finalText      String
+  createdAt      DateTime @default(now())
+
+  jobTitle       JobTitle @relation(fields: [jobTitleId], references: [id], onDelete: Cascade)
+  generationRun  GenerationRun? @relation(fields: [generationRunId], references: [id], onDelete: SetNull)
+
+  @@unique([jobTitleId, version])
+}
+
+model InstructionLink {
+  id          String   @id @default(cuid())
+  sourceId    String
+  targetId    String
+  relationType String
+  weight      Float
+  createdAt   DateTime @default(now())
+
+  source      JobTitle @relation("linkSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target      JobTitle @relation("linkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId])
+}
+
+model GenerationRun {
+  id               String   @id @default(cuid())
+  userId           String
+  jobTitleInput    String
+  perplexityModel  String?
+  openrouterModel  String?
+  promptVersion    String?
+  status           String
+  tokenUsage       Int?
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions         InstructionVersion[]
+}
