@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertStrictStructure, instructionSchema, type InstructionPayload } from "@/lib/di-contract";
-import { isDirectorRole, isLeadershipRole, isTailNoteLine } from "@/lib/di-rules";
+import { isDirectorRole, isLeadershipRole, isResponsibilityNoiseLine, isTailNoteLine } from "@/lib/di-rules";
 import { loadEnvConfig } from "@next/env";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-meta";
@@ -49,7 +49,8 @@ function normalizeTerminology(text: string): string {
     .toString()
     .replace(/Начальник/g, "Руководитель")
     .replace(/начальник/g, "руководитель")
-    .replace(/\bруководительу\b/gi, "руководителю")
+    // `\b` is ASCII-only in JS; Cyrillic words need a plain global replace.
+    .replace(/руководительу/gi, (w) => (w[0] === "Р" ? "Руководителю" : "руководителю"))
     .replace(/\bруководителю(\S)/g, "руководителю $1")
     .replace(/\bруководителя(\S)/g, "руководителя $1");
 }
@@ -361,9 +362,20 @@ ${mandatoryRules.join("\n")}
   }
 
   if (section === "responsibility.items") {
-    payload.sections.responsibility.items = payload.sections.responsibility.items.filter((l) => !isTailNoteLine(l));
-    if (payload.sections.responsibility.items.length === 0) {
-      payload.sections.responsibility.items = [current[0] || "Нести ответственность за качество и сроки выполнения задач"];
+    const filtered = payload.sections.responsibility.items
+      .filter((l) => !isTailNoteLine(l))
+      .filter((l) => !isResponsibilityNoiseLine(l));
+
+    if (filtered.length === 0) {
+      payload.sections.responsibility.items = ["Нести ответственность за качество и сроки выполнения задач"];
+    } else {
+      // Сохраняем стабильную длину списка в UI, но заполняем только "чистым" контентом.
+      payload.sections.responsibility.items = padOrTrim(
+        filtered,
+        desiredCount,
+        filtered,
+        "Нести ответственность за качество, сроки и безопасность выполнения работ",
+      );
     }
   }
 

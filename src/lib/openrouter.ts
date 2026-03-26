@@ -1,6 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
-import { isDirectorRole, isLeadershipRole, isTailNoteLine } from "@/lib/di-rules";
+import { isDirectorRole, isLeadershipRole, isResponsibilityNoiseLine, isTailNoteLine } from "@/lib/di-rules";
 
 loadEnvConfig(process.cwd());
 
@@ -139,7 +139,8 @@ function normalizeTerminology(text: string): string {
   return cleanGeneratedText(text)
     .replace(/Начальник/g, "Руководитель")
     .replace(/начальник/g, "руководитель")
-    .replace(/\bруководительу\b/gi, "руководителю")
+    // `\b` is ASCII-only in JS; Cyrillic words need a plain global replace.
+    .replace(/руководительу/gi, (w) => (w[0] === "Р" ? "Руководителю" : "руководителю"))
     .replace(/\bруководителю(\S)/g, "руководителю $1")
     .replace(/\bруководителя(\S)/g, "руководителя $1");
 }
@@ -269,16 +270,30 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
     pool,
     "Иметь право на условия и ресурсы, необходимые для безопасной работы",
   );
+  const responsibilityPool = pool.filter((line) => !isResponsibilityNoiseLine(line));
   safe.sections.responsibility.items = padList(
     safe.sections.responsibility.items,
     34,
-    pool,
+    responsibilityPool,
     "Нести ответственность за качество, сроки и безопасность выполнения работ",
   );
   // Примечания по ответственности должны быть отдельным блоком, не пунктом списка.
   safe.sections.responsibility.items = safe.sections.responsibility.items.filter(
-    (line) => !isTailNoteLine(line),
+    (line) => !isTailNoteLine(line) && !isResponsibilityNoiseLine(line),
   );
+
+  // Если после фильтрации стало меньше нужного количества — добиваем снова "чистым" пулом.
+  if (safe.sections.responsibility.items.length < 34) {
+    safe.sections.responsibility.items = padList(
+      safe.sections.responsibility.items,
+      34,
+      responsibilityPool,
+      "Нести ответственность за качество, сроки и безопасность выполнения работ",
+    );
+    safe.sections.responsibility.items = safe.sections.responsibility.items.filter(
+      (line) => !isTailNoteLine(line) && !isResponsibilityNoiseLine(line),
+    );
+  }
 
   // Бизнес-правило: для руководящих должностей всегда включаем 5S/стандартизацию.
   if (isLeadershipRole(input.jobTitle)) {

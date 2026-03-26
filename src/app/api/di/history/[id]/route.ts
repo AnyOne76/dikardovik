@@ -12,7 +12,8 @@ function normalizeTerminology(text: string): string {
   return String(text ?? "")
     .replace(/Начальник/g, "Руководитель")
     .replace(/начальник/g, "руководитель")
-    .replace(/\bруководительу\b/gi, "руководителю");
+    // `\b` is ASCII-only in JS; Cyrillic words need a plain global replace.
+    .replace(/руководительу/gi, (w) => (w[0] === "Р" ? "Руководителю" : "руководителю"));
 }
 
 function normalizePayloadTerminology(payload: InstructionPayload): InstructionPayload {

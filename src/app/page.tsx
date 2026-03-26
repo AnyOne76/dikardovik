@@ -172,16 +172,24 @@ export default function HomePage() {
       </div>
       {result && (
         <section className="mt-6 rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-zinc-900">
               Документ сформирован <span className="text-orange-700"># {result.version}</span>
             </h2>
-            <a
-              className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-100"
-              href={`/api/di/export/${result.id}`}
-            >
-              Экспорт DOCX
-            </a>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-100"
+                href={`/api/di/export/${result.id}`}
+              >
+                Экспорт DOCX
+              </a>
+              <a
+                className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-50"
+                href={`/history/${result.id}/edit`}
+              >
+                Открыть в редакторе
+              </a>
+            </div>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-orange-100">
             <table className="w-full border-collapse text-sm">
