@@ -53,3 +53,30 @@ export function isResponsibilityNoiseLine(line: string): boolean {
     /локально[-\s]*нормативн(ые|ых|ого)/i.test(s)
   );
 }
+
+// Для секции "Ответственность" принимаем только профильные формулировки.
+// Это защищает от попадания строк из "Общих положений" и служебных фраз.
+export function isResponsibilityRelevantLine(line: string): boolean {
+  const s = String(line ?? "").toLowerCase().trim();
+  if (!s) return false;
+  if (isTailNoteLine(s) || isResponsibilityNoiseLine(s)) return false;
+
+  const topicalPatterns: RegExp[] = [
+    /ответственност/i,
+    /нести\s+ответственност/i,
+    /привлечен\s+к\s+ответственност/i,
+    /нарушени/i,
+    /ущерб/i,
+    /убытк/i,
+    /срок(ов|и)?\s+выполнени/i,
+    /качест(во|ва)\s+выполнени/i,
+    /сохранност/i,
+    /разглашени/i,
+    /конфиденциал/i,
+    /охрана\s+труд/i,
+    /пожарн(ой|ая)\s+безопасност/i,
+    /трудов(ой|ого)\s+дисциплин/i,
+  ];
+
+  return topicalPatterns.some((re) => re.test(s));
+}

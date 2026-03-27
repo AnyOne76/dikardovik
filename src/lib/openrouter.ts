@@ -1,6 +1,10 @@
 import { loadEnvConfig } from "@next/env";
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
-import { isDirectorRole, isLeadershipRole, isResponsibilityNoiseLine, isTailNoteLine } from "@/lib/di-rules";
+import {
+  isDirectorRole,
+  isLeadershipRole,
+  isResponsibilityRelevantLine,
+} from "@/lib/di-rules";
 
 loadEnvConfig(process.cwd());
 
@@ -270,29 +274,16 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
     pool,
     "Иметь право на условия и ресурсы, необходимые для безопасной работы",
   );
-  const responsibilityPool = pool.filter((line) => !isResponsibilityNoiseLine(line));
-  safe.sections.responsibility.items = padList(
-    safe.sections.responsibility.items,
-    34,
-    responsibilityPool,
-    "Нести ответственность за качество, сроки и безопасность выполнения работ",
-  );
-  // Примечания по ответственности должны быть отдельным блоком, не пунктом списка.
-  safe.sections.responsibility.items = safe.sections.responsibility.items.filter(
-    (line) => !isTailNoteLine(line) && !isResponsibilityNoiseLine(line),
-  );
-
-  // Если после фильтрации стало меньше нужного количества — добиваем снова "чистым" пулом.
-  if (safe.sections.responsibility.items.length < 34) {
-    safe.sections.responsibility.items = padList(
-      safe.sections.responsibility.items,
-      34,
-      responsibilityPool,
+  // Для раздела "Ответственность" не задаем искусственный минимум:
+  // оставляем только релевантные пункты и гарантируем хотя бы 1 строку для валидности схемы.
+  safe.sections.responsibility.items = safe.sections.responsibility.items
+    .filter((line) => isResponsibilityRelevantLine(line))
+    .map((line) => cleanGeneratedText(line))
+    .filter(Boolean);
+  if (safe.sections.responsibility.items.length === 0) {
+    safe.sections.responsibility.items = [
       "Нести ответственность за качество, сроки и безопасность выполнения работ",
-    );
-    safe.sections.responsibility.items = safe.sections.responsibility.items.filter(
-      (line) => !isTailNoteLine(line) && !isResponsibilityNoiseLine(line),
-    );
+    ];
   }
 
   // Бизнес-правило: для руководящих должностей всегда включаем 5S/стандартизацию.
@@ -362,8 +353,7 @@ export async function generateInstructionPayload(input: GenerationInput): Promis
 - localRegulations: 6
 - employeeMustKnow: 14
 - duties.items: 32
-- rights.items: 22
-- responsibility.items: 34`;
+- rights.items: 22`;
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
