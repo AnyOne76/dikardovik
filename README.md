@@ -2,6 +2,7 @@
 
 Веб-приложение для генерации должностных инструкций по фиксированному шаблону с экспортом в DOCX, аутентификацией и историей версий.
 
+- **Документация в приложении:** после деплоя откройте страницу `/readme` — там выводится этот же файл `README.md` из корня проекта (GitHub по-прежнему показывает его только на странице репозитория; это не двусторонняя синхронизация).
 - **Стек:** Next.js (App Router), TypeScript, Prisma + SQLite, NextAuth (credentials), Perplexity / OpenRouter.
 - **Node.js:** версия 20 и выше.
 
@@ -18,6 +19,8 @@ npm run dev
 ```
 
 Откройте [http://localhost:3000](http://localhost:3000). Логин и пароль администратора задаются в `.env` (`SEED_ADMIN_LOGIN` / `SEED_ADMIN_PASSWORD`).
+
+**Описание проекта для HR и карта потоков (HTML, печать в PDF):** [http://localhost:3000/di-navigator-guide.html](http://localhost:3000/di-navigator-guide.html) — на проде замените хост на ваш публичный URL, путь тот же: `/di-navigator-guide.html`.
 
 ## Тесты и линт
 
