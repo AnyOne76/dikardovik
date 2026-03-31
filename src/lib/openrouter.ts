@@ -355,20 +355,29 @@ export async function generateInstructionPayload(input: GenerationInput): Promis
 - duties.items: 32
 - rights.items: 22`;
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: AbortSignal.timeout(20000),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+  } catch (e) {
+    // Сетевые ошибки/таймауты OpenRouter не должны ломать генерацию DI.
+    console.warn("OpenRouter request failed, fallback to local generation", e);
+    return { payload: ensureSectionItems(fallbackPayload(input), input), model };
+  }
 
   if (!response.ok) {
-    throw new Error(`OpenRouter API error ${response.status}`);
+    console.warn("OpenRouter API error, fallback to local generation", response.status);
+    return { payload: ensureSectionItems(fallbackPayload(input), input), model };
   }
 
   const data = await response.json();
