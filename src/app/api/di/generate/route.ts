@@ -9,6 +9,14 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-meta";
 
+function toErrorDetails(error: unknown): string {
+  if (error instanceof Error) {
+    const msg = error.message || String(error);
+    return `${error.name}: ${msg}`.slice(0, 500);
+  }
+  return String(error ?? "unknown error").slice(0, 500);
+}
+
 export async function POST(request: Request) {
   const ip = getClientIp(request);
   const allowed = checkRateLimit(`generate:${ip}`, 12, 60_000);
@@ -126,15 +134,20 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("DI generation failed", error);
-    await prisma.generationRun.update({
-      where: { id: run.id },
-      data: {
-        status: "failed",
-        errorMessage: "Internal generation error",
-      },
-    });
+    const errorDetails = toErrorDetails(error);
+    try {
+      await prisma.generationRun.update({
+        where: { id: run.id },
+        data: {
+          status: "failed",
+          errorMessage: errorDetails,
+        },
+      });
+    } catch (updateError) {
+      console.error("Failed to persist generation error", updateError);
+    }
     return NextResponse.json(
-      { error: "Не удалось сформировать документ. Попробуйте еще раз позже." },
+      { error: "Не удалось сформировать документ. Попробуйте еще раз позже.", errorId: run.id },
       { status: 500 },
     );
   }
