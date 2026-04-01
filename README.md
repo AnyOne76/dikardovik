@@ -85,13 +85,14 @@ nano .env   # заполните переменные
 
 ```bash
 npm ci
-npx prisma generate
-npx prisma migrate deploy
+npm run db:deploy
 npm run db:seed
 npm run build
 ```
 
-Скрипт `npm run build` уже вызывает `prisma generate` перед сборкой Next.js; отдельная команда `npx prisma generate` не обязательна, но допустима.
+Скрипт `npm run build` уже вызывает `prisma generate` перед сборкой Next.js.
+
+Важно: на сервере избегайте запуска «голого» `npx prisma ...`, если `node_modules` не установлен (например после `Killed` во время `npm ci`). В таком случае `npx` может подтянуть несовместимую версию Prisma CLI.
 
 ### 4. Запуск в продакшене
 
@@ -122,12 +123,12 @@ pm2 startup
 
 ```bash
 cd /path/to/app
-git pull
-npm ci
-npx prisma migrate deploy
-npm run build
-pm2 restart kadrovik-di
+git pull origin main
+chmod +x ./scripts/deploy.sh
+./scripts/deploy.sh
 ```
+
+Если `npm ci` завершается `Killed`, это обычно нехватка RAM. Добавьте swap или увеличьте память VPS.
 
 ## Переменные окружения
 
