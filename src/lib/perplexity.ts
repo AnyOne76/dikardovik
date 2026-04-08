@@ -1,4 +1,5 @@
 import { loadEnvConfig } from "@next/env";
+import { getResolvedApiConfig, type ResolvedApiConfig } from "@/lib/api-settings";
 
 loadEnvConfig(process.cwd());
 
@@ -110,9 +111,13 @@ async function queryPerplexity(apiKey: string, model: string, prompt: string): P
   return normalizeLines(content);
 }
 
-export async function fetchPerplexityFacts(jobTitle: string): Promise<PerplexityResult> {
-  const apiKey = (process.env.PERPLEXITY_API_KEY ?? "").trim();
-  const model = process.env.PERPLEXITY_MODEL || "sonar-pro";
+export async function fetchPerplexityFacts(
+  jobTitle: string,
+  resolved?: ResolvedApiConfig,
+): Promise<PerplexityResult> {
+  const { perplexityApiKey: apiKeyRaw, perplexityModel: model } =
+    resolved ?? (await getResolvedApiConfig());
+  const apiKey = apiKeyRaw.trim();
   const assistentusLines = await fetchAssistentusFacts(`должностная инструкция ${jobTitle}`).catch(() => []);
   const targetCount = 90;
   const minAssistentusOnly = 40;
@@ -172,14 +177,18 @@ export async function fetchPerplexityFacts(jobTitle: string): Promise<Perplexity
   return { snippets, model };
 }
 
-export async function fetchPerplexityFactsForSection(opts: {
-  jobTitle: string;
-  department?: string;
-  sectionHuman: string;
-  desiredCount: number;
-}): Promise<PerplexityResult> {
-  const apiKey = (process.env.PERPLEXITY_API_KEY ?? "").trim();
-  const model = process.env.PERPLEXITY_MODEL || "sonar-pro";
+export async function fetchPerplexityFactsForSection(
+  opts: {
+    jobTitle: string;
+    department?: string;
+    sectionHuman: string;
+    desiredCount: number;
+  },
+  resolved?: ResolvedApiConfig,
+): Promise<PerplexityResult> {
+  const { perplexityApiKey: apiKeyRaw, perplexityModel: model } =
+    resolved ?? (await getResolvedApiConfig());
+  const apiKey = apiKeyRaw.trim();
 
   const query = `должностная инструкция ${opts.jobTitle}${opts.department ? ` ${opts.department}` : ""}`;
   const assistentusLines = await fetchAssistentusFacts(query).catch(() => []);

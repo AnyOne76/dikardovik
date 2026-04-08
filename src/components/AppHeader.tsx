@@ -58,12 +58,20 @@ export function AppHeader() {
                 Сменить пароль
               </Link>
               {role === "admin" && (
-                <Link
-                  href="/admin/users"
-                  className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
-                >
-                  Пользователи
-                </Link>
+                <>
+                  <Link
+                    href="/admin/settings"
+                    className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
+                  >
+                    Настройки API
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
+                  >
+                    Пользователи
+                  </Link>
+                </>
               )}
               <button
                 type="button"

@@ -73,3 +73,13 @@ model GenerationRun {
   user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
   versions         InstructionVersion[]
 }
+
+/// Singleton настроек API (ключи Perplexity / OpenRouter). id всегда "default".
+model AppSettings {
+  id                 String   @id
+  perplexityApiKey   String   @default("")
+  openrouterApiKey   String   @default("")
+  perplexityModel    String   @default("sonar-pro")
+  openrouterModel    String   @default("openai/gpt-4o-mini")
+  updatedAt          DateTime @updatedAt
+}
