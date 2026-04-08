@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { assertStrictStructure, instructionSchema, toPrintableText } from "@/lib/di-contract";
+import { getResolvedApiConfig } from "@/lib/api-settings";
 import { fetchPerplexityFacts } from "@/lib/perplexity";
 import { generateInstructionPayload } from "@/lib/openrouter";
 import { normalizeJobTitle } from "@/lib/normalize";
@@ -51,20 +52,24 @@ export async function POST(request: Request) {
   });
 
   try {
+    const apiConfig = await getResolvedApiConfig();
     let perplexity: { model: string; snippets: string[] } = { model: "unavailable", snippets: [] };
     try {
-      perplexity = await fetchPerplexityFacts(jobTitle);
+      perplexity = await fetchPerplexityFacts(jobTitle, apiConfig);
     } catch (factsError) {
       // External search must not break DI generation pipeline.
       console.warn("Facts collection failed, fallback to generation without facts", factsError);
     }
 
-    const generated = await generateInstructionPayload({
-      jobTitle,
-      department,
-      facts: perplexity.snippets.slice(0, 90),
-      relatedContext: related.flatMap((r) => r.versions.map((v) => v.finalText.slice(0, 400))),
-    });
+    const generated = await generateInstructionPayload(
+      {
+        jobTitle,
+        department,
+        facts: perplexity.snippets.slice(0, 90),
+        relatedContext: related.flatMap((r) => r.versions.map((v) => v.finalText.slice(0, 400))),
+      },
+      apiConfig,
+    );
     const parsed = instructionSchema.parse(generated.payload);
     assertStrictStructure(parsed);
     const finalText = toPrintableText(parsed);

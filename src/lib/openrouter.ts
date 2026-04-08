@@ -1,4 +1,5 @@
 import { loadEnvConfig } from "@next/env";
+import { getResolvedApiConfig, type ResolvedApiConfig } from "@/lib/api-settings";
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
 import {
   isDirectorRole,
@@ -311,9 +312,13 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
   return applyTerminologyRules(safe);
 }
 
-export async function generateInstructionPayload(input: GenerationInput): Promise<{ payload: InstructionPayload; model: string; }> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+export async function generateInstructionPayload(
+  input: GenerationInput,
+  resolved?: ResolvedApiConfig,
+): Promise<{ payload: InstructionPayload; model: string; }> {
+  const { openrouterApiKey: apiKeyRaw, openrouterModel: model } =
+    resolved ?? (await getResolvedApiConfig());
+  const apiKey = apiKeyRaw?.trim() || undefined;
   if (!apiKey) {
     return { payload: ensureSectionItems(fallbackPayload(input), input), model };
   }
