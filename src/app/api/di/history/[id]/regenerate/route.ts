@@ -241,7 +241,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
                       ? payload.sections.rights.items
                       : payload.sections.responsibility.items;
 
-  const desiredCount = Math.max(1, current.length);
+  // Keep UI stable, but never go below mandatory minimums from the generation prompt.
+  const minBySection: Record<SectionKey, number> = {
+    requiredQualification: 4,
+    subordination: 2,
+    hiringProcedure: 1,
+    substitutionProcedure: 1,
+    regulatoryDocuments: 8,
+    localRegulations: 6,
+    employeeMustKnow: 14,
+    "duties.items": 32,
+    "rights.items": 22,
+    "responsibility.items": 25,
+  };
+
+  const desiredCount = Math.max(1, current.length, minBySection[section] ?? 1);
 
   const itemsAsText = current.map((x, i) => `${i + 1}. ${x}`).join("\n");
   const sectionHuman =

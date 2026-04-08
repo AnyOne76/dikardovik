@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Кадровый Навигатор — описание проекта</title>
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --text: #1c1917;
+      --muted: #57534e;
+      --border: #fed7aa;
+      --accent: #ea580c;
+      --accent-soft: #fff7ed;
+      --accent-mid: #fb923c;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.07);
+      --radius: 16px;
+      --font: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+      background-image: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(251, 146, 60, 0.18), transparent 55%);
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 24px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toolbar strong {
+      font-size: 0.95rem;
+      color: var(--accent);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .btn:hover {
+      background: var(--accent-soft);
+      box-shadow: var(--shadow);
+      transform: translateY(-1px);
+    }
+
+    .btn--primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-mid));
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .btn--primary:hover {
+      filter: brightness(1.05);
+      color: #fff;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    header.hero {
+      margin-bottom: 40px;
+      padding: 36px;
+      background: linear-gradient(145deg, var(--accent-soft), var(--surface) 60%);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 4px);
+      box-shadow: var(--shadow);
+    }
+
+    header.hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(1.75rem, 4vw, 2.25rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    header.hero .tagline {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 42em;
+    }
+
+    h2 {
+      margin: 48px 0 16px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    h2:first-of-type {
+      margin-top: 0;
+    }
+
+    h3 {
+      margin: 24px 0 8px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 1em;
+      color: var(--text);
+    }
+
+    ul {
+      margin: 0 0 1em;
+      padding-left: 1.35em;
+    }
+
+    li {
+      margin-bottom: 0.4em;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .card {
+      padding: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      page-break-inside: avoid;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .note {
+      margin: 24px 0;
+      padding: 16px 20px;
+      background: var(--accent-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border-left: 4px solid var(--accent);
+    }
+
+    .note p {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .flow-section {
+      margin: 28px 0;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      page-break-inside: avoid;
+    }
+
+    .flow-section svg {
+      display: block;
+      min-width: 760px;
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* Широкая «полная карта» скрыта: на экране и в файле показываем только нижнюю компактную схему */
+    .flow-section--full .flow-svg--screen {
+      display: none !important;
+    }
+
+    /* print-friendly: avoid display:none on alternate SVGs */
+    @media screen {
+      .flow-section--full .flow-svg--print {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        clip-path: none !important;
+        pointer-events: auto !important;
+        white-space: normal !important;
+      }
+
+      .flow-svg--print {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        border: 0;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+    }
+
+    h3.flow-subtitle {
+      margin: 36px 0 12px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text);
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .flow-legend {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration-thickness: 1px;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm 12mm;
+      }
+
+      body {
+        background: #fff;
+        background-image: none;
+        font-size: 10.5pt;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .no-print,
+      .toolbar {
+        display: none !important;
+      }
+
+      .wrap {
+        max-width: none;
+        padding: 0;
+      }
+
+      header.hero {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+
+      h2 {
+        break-after: avoid;
+      }
+
+      .card,
+      .note {
+        break-inside: avoid;
+        box-shadow: none;
+      }
+
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-section {
+        overflow: visible !important;
+        padding: 12px 0;
+        box-shadow: none;
+        /* allow long diagrams to continue on next page instead of clipping */
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+
+      /* landscape variant hidden in print */
+      .flow-svg--screen {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip-path: inset(50%) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+
+      .flow-svg--print {
+        display: block !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        clip-path: none !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        margin: 0 auto;
+      }
+
+      .flow-section svg {
+        min-width: 0 !important;
+      }
+
+      .flow-section--full svg {
+        min-width: 0 !important;
+      }
+
+      a {
+        color: #000;
+        text-decoration: none;
+      }
+
+      a[href^="http"]::after {
+        content: " (" attr(href) ")";
+        font-size: 0.85em;
+        color: #555;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar no-print">
+    <strong>Кадровый Навигатор — документация</strong>
+    <div class="toolbar-actions">
+      <button type="button" class="btn btn--primary" onclick="window.print()">Сохранить копию</button>
+      <a class="btn" href="/">В приложение</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <header class="hero">
+      <h1>Кадровый Навигатор</h1>
+      <p class="tagline">
+        Веб-сервис для кадровой службы: из введённой должности и подразделения автоматически собирается
+        <strong>должностная инструкция</strong> по вашему корпоративному шаблону — с табличным предпросмотром,
+        историей версий и выгрузкой в Word (DOCX).
+      </p>
+    </header>
+
+    <section id="about">
+      <h2>Зачем это нужно</h2>
+      <p>
+        HR не копирует текст из десяти разных источников вручную: система сначала подтягивает справочную информацию
+        (в первую очередь с <a href="https://assistentus.ru">assistentus.ru</a>, при нехватке данных — через
+        Perplexity), затем модель на OpenRouter оформляет материал в <strong>строгую структуру</strong> документа:
+        разделы «Общие положения», «Должностные обязанности», «Права», «Ответственность», шапка и блоки согласования —
+        как в ваших образцах.
+      </p>
+      <p>
+        Внутри приложения действуют дополнительные правила (например, единый текст про приём на работу, особые пункты
+        для руководителей или линейных сотрудников, корректировка формулировок). Итог можно править вручную,
+        сохранять новыми версиями и точечно перегенерировать отдельные блоки.
+      </p>
+    </section>
+
+    <section id="features">
+      <h2>Что умеет пользователь</h2>
+      <ul>
+        <li><strong>Вход</strong> по email и паролю (NextAuth).</li>
+        <li><strong>Выбор подразделения</strong> из фиксированного списка или вариант «Другое» со своим названием.</li>
+        <li><strong>Генерация ДИ</strong> по должности: предпросмотр в виде таблицы, экспорт в DOCX.</li>
+        <li><strong>Переход в редактор</strong> сразу после генерации и из списка истории — правка по секциям, предпросмотр, сохранение новой версии.</li>
+        <li><strong>Перегенерация блока</strong> с повторным поиском по должности и подразделению (assistentus + Perplexity) и доработкой через OpenRouter.</li>
+        <li><strong>История</strong> сохранённых документов, выборочное удаление, скачивание DOCX.</li>
+        <li><strong>Администратор</strong> — управление пользователями, смена логина, сброс пароля (отдельные страницы в приложении).</li>
+      </ul>
+    </section>
+
+    <section id="tech">
+      <h2>На каких технологиях сделано</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Next.js 16 + React 19</h3>
+          <p>Современный интерфейс и серверные API на одной платформе (App Router).</p>
+        </div>
+        <div class="card">
+          <h3>TypeScript</h3>
+          <p>Предсказуемая типизация кода и контрактов данных.</p>
+        </div>
+        <div class="card">
+          <h3>Prisma + SQLite</h3>
+          <p>Пользователи, запуски генерации, версии ДИ, связи между должностями — в одной файловой базе.</p>
+        </div>
+        <div class="card">
+          <h3>NextAuth + bcrypt</h3>
+          <p>Вход по логину и паролю, хэширование паролей, сессии.</p>
+        </div>
+        <div class="card">
+          <h3>Zod</h3>
+          <p>Проверка JSON должностной инструкции: структура и заголовки секций не могут «поехать».</p>
+        </div>
+        <div class="card">
+          <h3>docx</h3>
+          <p>Формирование файла Word с табличной вёрсткой, согласованной с предпросмотром.</p>
+        </div>
+        <div class="card">
+          <h3>Tailwind CSS 4</h3>
+          <p>Стили экранов приложения (эта справочная страница — отдельный самодостаточный HTML).</p>
+        </div>
+        <div class="card">
+          <h3>Внешние API</h3>
+          <p>Perplexity, OpenRouter; парсинг справки с assistentus.ru на сервере.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="security">
+      <h2>Безопасность и данные (кратко)</h2>
+      <ul>
+        <li>Закрытые маршруты и API проверяют авторизацию; разделение ролей (например, admin и hr).</li>
+        <li>Ограничение частоты запросов на чувствительных операциях (вход, генерация, перегенерация).</li>
+        <li>Секреты и ключи API задаются только в переменных окружения на сервере, не в репозитории.</li>
+        <li>Каждая сгенерированная инструкция хранится как версия с JSON-шаблоном и текстом для поиска/экспорта.</li>
+      </ul>
+    </section>
+
+    <section id="flow">
+      <h2>Карта потоков</h2>
+      <p>
+        Ниже — две версии одной упрощённой схемы: слева направо (обзор в одну строку) и по шагам сверху вниз (удобно при просмотре файла целиком).
+      </p>
+
+      <div class="flow-section">
+        <svg xmlns="http://www.w3.org/2000/svg" class="flow-svg flow-svg--screen" viewBox="0 0 920 200" role="img" aria-labelledby="flowTitle flowDesc">
+          <title id="flowTitle">Карта потоков Кадрового Навигатора</title>
+          <desc id="flowDesc">
+            Поток от пользователя через вход и главную страницу к API генерации, источникам данных, OpenRouter,
+            проверке шаблона, базе данных, предпросмотру и редактору с перегенерацией.
+          </desc>
+          <defs>
+            <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#fff7ed" />
+              <stop offset="100%" style="stop-color:#ffffff" />
+            </linearGradient>
+            <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+              <path d="M0,0 L10,4 L0,8 Z" fill="#c2410c" />
+            </marker>
+          </defs>
+          <text x="460" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#1c1917">Основной путь: генерация и сохранение</text>
+
+          <!-- Row of boxes y=40 -->
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="11">
+            <rect x="8" y="44" width="72" height="44" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="44" y="64" text-anchor="middle" font-weight="700" fill="#ea580c">Пользо-</text>
+            <text x="44" y="78" text-anchor="middle" fill="#57534e">ватель</text>
+
+            <rect x="100" y="44" width="76" height="44" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="138" y="64" text-anchor="middle" font-weight="700" fill="#ea580c">Вход</text>
+            <text x="138" y="78" text-anchor="middle" fill="#57534e">NextAuth</text>
+
+            <rect x="196" y="44" width="86" height="44" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="239" y="64" text-anchor="middle" font-weight="700" fill="#ea580c">Главная</text>
+            <text x="239" y="78" text-anchor="middle" fill="#57534e">форма ДИ</text>
+
+            <rect x="302" y="40" width="100" height="52" rx="8" fill="#fff" stroke="#ea580c" stroke-width="2" />
+            <text x="352" y="60" text-anchor="middle" font-weight="700" fill="#c2410c">API</text>
+            <text x="352" y="74" text-anchor="middle" fill="#57534e">/api/di/generate</text>
+
+            <rect x="422" y="40" width="108" height="52" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="476" y="58" text-anchor="middle" font-weight="700" fill="#ea580c">Поиск фактов</text>
+            <text x="476" y="72" text-anchor="middle" fill="#57534e">assistentus</text>
+            <text x="476" y="84" text-anchor="middle" fill="#57534e">+ Perplexity</text>
+
+            <rect x="548" y="44" width="86" height="44" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="591" y="64" text-anchor="middle" font-weight="700" fill="#ea580c">Open-</text>
+            <text x="591" y="78" text-anchor="middle" fill="#57534e">Router</text>
+
+            <rect x="652" y="40" width="100" height="52" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="702" y="58" text-anchor="middle" font-weight="700" fill="#ea580c">Проверка</text>
+            <text x="702" y="72" text-anchor="middle" fill="#57534e">Zod + жёсткий</text>
+            <text x="702" y="84" text-anchor="middle" fill="#57534e">шаблон</text>
+
+            <rect x="770" y="44" width="64" height="44" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="1.5" />
+            <text x="802" y="64" text-anchor="middle" font-weight="700" fill="#c2410c">SQLite</text>
+            <text x="802" y="78" text-anchor="middle" fill="#57534e">Prisma</text>
+          </g>
+
+          <!-- Arrows top row -->
+          <g fill="none">
+            <line x1="80" y1="66" x2="98" y2="66" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+            <line x1="176" y1="66" x2="194" y2="66" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+            <line x1="282" y1="66" x2="300" y2="66" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+            <line x1="402" y1="66" x2="420" y2="66" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+            <line x1="530" y1="66" x2="546" y2="66" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+            <line x1="636" y1="66" x2="650" y2="66" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+            <line x1="752" y1="66" x2="768" y2="66" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+          </g>
+
+          <!-- Second row: preview, export, editor -->
+          <text x="460" y="118" text-anchor="middle" font-size="13" font-weight="700" fill="#1c1917">После сохранения</text>
+
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="11">
+            <rect x="218" y="132" width="100" height="48" rx="8" fill="#fff" stroke="#ea580c" stroke-width="2" />
+            <text x="268" y="152" text-anchor="middle" font-weight="700" fill="#c2410c">Предпросмотр</text>
+            <text x="268" y="166" text-anchor="middle" fill="#57534e">таблица в приложении</text>
+
+            <rect x="340" y="132" width="100" height="48" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="390" y="152" text-anchor="middle" font-weight="700" fill="#ea580c">Экспорт</text>
+            <text x="390" y="166" text-anchor="middle" fill="#57534e">GET /export → DOCX</text>
+
+            <rect x="462" y="132" width="108" height="48" rx="8" fill="url(#boxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="516" y="152" text-anchor="middle" font-weight="700" fill="#ea580c">Редактор</text>
+            <text x="516" y="166" text-anchor="middle" fill="#57534e">/history/…/edit</text>
+
+            <rect x="592" y="132" width="124" height="48" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="1.5" />
+            <text x="654" y="152" text-anchor="middle" font-weight="700" fill="#c2410c">Перегенерация</text>
+            <text x="654" y="166" text-anchor="middle" fill="#57534e">…/regenerate + поиск</text>
+          </g>
+
+          <!-- curved connector from DB down to preview -->
+          <path d="M 802 88 Q 840 110 268 132" fill="none" stroke="#c2410c" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.85" />
+          <text x="560" y="128" text-anchor="middle" font-size="9" fill="#78716c">версия в БД → UI</text>
+
+          <line x1="318" y1="156" x2="338" y2="156" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+          <line x1="440" y1="156" x2="460" y2="156" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+          <line x1="570" y1="156" x2="590" y2="156" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow)" />
+        </svg>
+
+        <!-- та же цепочка, по шагам сверху вниз -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="flow-svg flow-svg--print" viewBox="0 0 340 820" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="printSimpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#fff7ed" />
+              <stop offset="100%" style="stop-color:#ffffff" />
+            </linearGradient>
+            <marker id="printSimpleArrow" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+              <path d="M0,0 L8,3.5 L0,7 Z" fill="#c2410c" />
+            </marker>
+          </defs>
+          <text x="170" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#1c1917">Основной путь (по шагам)</text>
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="10">
+            <rect x="30" y="32" width="280" height="40" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="56" text-anchor="middle" font-weight="700" fill="#ea580c">Пользователь</text>
+            <rect x="30" y="88" width="280" height="40" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="112" text-anchor="middle" font-weight="700" fill="#ea580c">Вход · NextAuth</text>
+            <rect x="30" y="144" width="280" height="40" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="168" text-anchor="middle" font-weight="700" fill="#ea580c">Главная · форма ДИ</text>
+            <rect x="30" y="200" width="280" height="44" rx="8" fill="#fff" stroke="#ea580c" stroke-width="2" />
+            <text x="170" y="226" text-anchor="middle" font-weight="700" fill="#c2410c">POST /api/di/generate</text>
+            <rect x="30" y="260" width="280" height="48" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="282" text-anchor="middle" font-weight="700" fill="#ea580c">Поиск фактов</text>
+            <text x="170" y="296" text-anchor="middle" fill="#57534e">assistentus.ru + Perplexity</text>
+            <rect x="30" y="324" width="280" height="40" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="348" text-anchor="middle" font-weight="700" fill="#ea580c">OpenRouter (LLM)</text>
+            <rect x="30" y="380" width="280" height="44" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="402" text-anchor="middle" font-weight="700" fill="#ea580c">Проверка</text>
+            <text x="170" y="416" text-anchor="middle" fill="#57534e">Zod + жёсткий шаблон секций</text>
+            <rect x="30" y="436" width="280" height="40" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="1.5" />
+            <text x="170" y="460" text-anchor="middle" font-weight="700" fill="#c2410c">SQLite · Prisma · версия ДИ</text>
+          </g>
+          <g fill="none" stroke="#ea580c" stroke-width="1.8">
+            <line x1="170" y1="72" x2="170" y2="88" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="128" x2="170" y2="144" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="184" x2="170" y2="200" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="244" x2="170" y2="260" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="308" x2="170" y2="324" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="364" x2="170" y2="380" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="424" x2="170" y2="436" marker-end="url(#printSimpleArrow)" />
+          </g>
+          <text x="170" y="498" text-anchor="middle" font-size="11" font-weight="700" fill="#1c1917">После сохранения (интерфейс)</text>
+          <text x="170" y="518" text-anchor="middle" font-size="9" fill="#78716c">данные версии из БД → интерфейс</text>
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="10">
+            <rect x="30" y="528" width="280" height="44" rx="8" fill="#fff" stroke="#ea580c" stroke-width="2" />
+            <text x="170" y="548" text-anchor="middle" font-weight="700" fill="#c2410c">Предпросмотр</text>
+            <text x="170" y="562" text-anchor="middle" fill="#57534e">таблица в приложении</text>
+            <rect x="30" y="584" width="280" height="44" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="604" text-anchor="middle" font-weight="700" fill="#ea580c">Экспорт</text>
+            <text x="170" y="618" text-anchor="middle" fill="#57534e">GET /api/di/export/[id] → DOCX</text>
+            <rect x="30" y="640" width="280" height="44" rx="8" fill="url(#printSimpleGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="170" y="660" text-anchor="middle" font-weight="700" fill="#ea580c">Редактор</text>
+            <text x="170" y="674" text-anchor="middle" fill="#57534e">/history/…/edit</text>
+            <rect x="30" y="696" width="280" height="48" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="1.5" />
+            <text x="170" y="718" text-anchor="middle" font-weight="700" fill="#c2410c">Перегенерация блока</text>
+            <text x="170" y="732" text-anchor="middle" fill="#57534e">POST …/regenerate + поиск по секции</text>
+          </g>
+          <g fill="none" stroke="#ea580c" stroke-width="1.8">
+            <line x1="170" y1="572" x2="170" y2="584" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="628" x2="170" y2="640" marker-end="url(#printSimpleArrow)" />
+            <line x1="170" y1="684" x2="170" y2="696" marker-end="url(#printSimpleArrow)" />
+          </g>
+        </svg>
+        <p class="flow-legend">
+          Редактор читает и сохраняет JSON через <code style="background:#fff7ed;padding:2px 6px;border-radius:6px;border:1px solid #fed7aa">/api/di/history/[id]</code>;
+          перегенерация одного блока — отдельный запрос к API с текущим шаблоном и повторным поиском по должности.
+        </p>
+      </div>
+
+      <h3 class="flow-subtitle" id="flow-full">Полная схема (слои и маршруты)</h3>
+      <p>
+        Полная схема ниже в одном блоке: четыре уровня (интерфейс, API, внешние сервисы, база данных), внутри каждого уровня — две колонки. Полностью помещается по ширине страницы без прокрутки.
+      </p>
+
+      <div class="flow-section flow-section--full">
+        <svg xmlns="http://www.w3.org/2000/svg" class="flow-svg flow-svg--screen" viewBox="0 0 960 508" role="img" aria-labelledby="fullFlowTitle fullFlowDesc">
+          <title id="fullFlowTitle">Полная карта потоков Кадрового Навигатора по слоям</title>
+          <desc id="fullFlowDesc">
+            Четыре слоя: страницы веб-приложения, API Next.js, внешние сервисы assistentus Perplexity OpenRouter,
+            модели Prisma в SQLite. Показаны генерация, история, экспорт DOCX, редактор и перегенерация блока.
+          </desc>
+          <defs>
+            <linearGradient id="fullBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#fff7ed" />
+              <stop offset="100%" style="stop-color:#ffffff" />
+            </linearGradient>
+            <marker id="arrowFull" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+              <path d="M0,0 L10,4 L0,8 Z" fill="#9a3412" />
+            </marker>
+            <marker id="arrowFullSoft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#78716c" />
+            </marker>
+          </defs>
+
+          <text x="480" y="20" text-anchor="middle" font-size="14" font-weight="800" fill="#1c1917">Полная карта: от интерфейса к базе данных</text>
+
+          <!-- Swimlane backgrounds -->
+          <rect x="8" y="34" width="944" height="86" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="1" opacity="0.65" />
+          <rect x="8" y="128" width="944" height="118" rx="10" fill="#ffffff" stroke="#fdba74" stroke-width="1" />
+          <rect x="8" y="256" width="944" height="92" rx="10" fill="#fffbeb" stroke="#fde68a" stroke-width="1" opacity="0.9" />
+          <rect x="8" y="358" width="944" height="138" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="1" opacity="0.55" />
+
+          <text x="20" y="54" font-size="11" font-weight="800" fill="#c2410c">1. Браузер (страницы Next.js)</text>
+          <text x="20" y="148" font-size="11" font-weight="800" fill="#c2410c">2. API приложения (Route Handlers)</text>
+          <text x="20" y="276" font-size="11" font-weight="800" fill="#92400e">3. Внешние сервисы</text>
+          <text x="20" y="378" font-size="11" font-weight="800" fill="#c2410c">4. Данные: SQLite через Prisma</text>
+
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="9.5">
+            <!-- Layer 1 -->
+            <rect x="24" y="62" width="78" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#ea580c" stroke-width="1.5" />
+            <text x="63" y="80" text-anchor="middle" font-weight="700" fill="#ea580c">/login</text>
+            <text x="63" y="94" text-anchor="middle" fill="#57534e">вход</text>
+
+            <rect x="112" y="62" width="78" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="151" y="80" text-anchor="middle" font-weight="700" fill="#ea580c">/</text>
+            <text x="151" y="94" text-anchor="middle" fill="#57534e">главная ДИ</text>
+
+            <rect x="200" y="62" width="86" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="243" y="80" text-anchor="middle" font-weight="700" fill="#ea580c">/history</text>
+            <text x="243" y="94" text-anchor="middle" fill="#57534e">список</text>
+
+            <rect x="296" y="62" width="102" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="347" y="80" text-anchor="middle" font-weight="700" fill="#ea580c">/history/…/edit</text>
+            <text x="347" y="94" text-anchor="middle" fill="#57534e">редактор</text>
+
+            <rect x="408" y="62" width="88" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="452" y="80" text-anchor="middle" font-weight="700" fill="#ea580c">/account</text>
+            <text x="452" y="94" text-anchor="middle" fill="#57534e">пароль</text>
+
+            <rect x="506" y="62" width="94" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="553" y="80" text-anchor="middle" font-weight="700" fill="#ea580c">/admin/users</text>
+            <text x="553" y="94" text-anchor="middle" fill="#57534e">админ</text>
+
+            <rect x="612" y="58" width="168" height="52" rx="7" fill="#fff" stroke="#ea580c" stroke-width="2" />
+            <text x="696" y="78" text-anchor="middle" font-weight="700" fill="#c2410c">Справка (вы здесь)</text>
+            <text x="696" y="94" text-anchor="middle" fill="#57534e">/di-navigator-guide.html</text>
+
+            <!-- Layer 2 -->
+            <rect x="24" y="168" width="108" height="48" rx="7" fill="url(#fullBoxGrad)" stroke="#ea580c" stroke-width="1.5" />
+            <text x="78" y="188" text-anchor="middle" font-weight="700" fill="#ea580c">/api/auth/*</text>
+            <text x="78" y="204" text-anchor="middle" fill="#57534e">NextAuth</text>
+
+            <rect x="150" y="164" width="118" height="56" rx="7" fill="#fff" stroke="#ea580c" stroke-width="2" />
+            <text x="209" y="186" text-anchor="middle" font-weight="700" fill="#c2410c">POST …/di/generate</text>
+            <text x="209" y="200" text-anchor="middle" fill="#57534e">должность +</text>
+            <text x="209" y="212" text-anchor="middle" fill="#57534e">подразделение</text>
+
+            <rect x="284" y="168" width="124" height="48" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="346" y="188" text-anchor="middle" font-weight="700" fill="#ea580c">/api/di/history</text>
+            <text x="346" y="204" text-anchor="middle" fill="#57534e">список версий</text>
+
+            <rect x="422" y="168" width="132" height="48" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="488" y="188" text-anchor="middle" font-weight="700" fill="#ea580c">…/history/[id]</text>
+            <text x="488" y="204" text-anchor="middle" fill="#57534e">GET/POST/DELETE</text>
+
+            <rect x="568" y="168" width="136" height="48" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="636" y="188" text-anchor="middle" font-weight="700" fill="#ea580c">…/regenerate</text>
+            <text x="636" y="204" text-anchor="middle" fill="#57534e">блок + поиск</text>
+
+            <rect x="718" y="168" width="118" height="48" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="777" y="188" text-anchor="middle" font-weight="700" fill="#ea580c">…/export/[id]</text>
+            <text x="777" y="204" text-anchor="middle" fill="#57534e">файл DOCX</text>
+
+            <rect x="848" y="168" width="96" height="48" rx="7" fill="url(#fullBoxGrad)" stroke="#fdba74" stroke-width="1.5" />
+            <text x="896" y="188" text-anchor="middle" font-weight="700" fill="#ea580c">admin /</text>
+            <text x="896" y="204" text-anchor="middle" fill="#57534e">account API</text>
+
+            <!-- Layer 3 -->
+            <rect x="44" y="286" width="118" height="44" rx="7" fill="#ffffff" stroke="#d97706" stroke-width="1.5" />
+            <text x="103" y="304" text-anchor="middle" font-weight="700" fill="#b45309">assistentus.ru</text>
+            <text x="103" y="318" text-anchor="middle" fill="#57534e">парсинг фактов</text>
+
+            <rect x="180" y="286" width="108" height="44" rx="7" fill="#ffffff" stroke="#d97706" stroke-width="1.5" />
+            <text x="234" y="304" text-anchor="middle" font-weight="700" fill="#b45309">Perplexity</text>
+            <text x="234" y="318" text-anchor="middle" fill="#57534e">доп. факты</text>
+
+            <rect x="306" y="286" width="108" height="44" rx="7" fill="#ffffff" stroke="#d97706" stroke-width="1.5" />
+            <text x="360" y="304" text-anchor="middle" font-weight="700" fill="#b45309">OpenRouter</text>
+            <text x="360" y="318" text-anchor="middle" fill="#57534e">LLM JSON</text>
+
+            <rect x="432" y="280" width="220" height="56" rx="7" fill="#fffbeb" stroke="#ca8a04" stroke-width="1.5" />
+            <text x="542" y="300" text-anchor="middle" font-weight="700" fill="#92400e">На сервере после ответа LLM</text>
+            <text x="542" y="314" text-anchor="middle" fill="#57534e">очистка текста, правила 5S/приём/subordination,</text>
+            <text x="542" y="326" text-anchor="middle" fill="#57534e">Zod + assertStrictStructure → единый templateJson</text>
+
+            <!-- Layer 4 -->
+            <rect x="32" y="392" width="92" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#c2410c" stroke-width="1.5" />
+            <text x="78" y="410" text-anchor="middle" font-weight="700" fill="#c2410c">User</text>
+            <text x="78" y="424" text-anchor="middle" fill="#57534e">логин, роль</text>
+
+            <rect x="136" y="392" width="110" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#c2410c" stroke-width="1.5" />
+            <text x="191" y="410" text-anchor="middle" font-weight="700" fill="#c2410c">GenerationRun</text>
+            <text x="191" y="424" text-anchor="middle" fill="#57534e">кто/когда/модели</text>
+
+            <rect x="258" y="392" width="92" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#c2410c" stroke-width="1.5" />
+            <text x="304" y="410" text-anchor="middle" font-weight="700" fill="#c2410c">JobTitle</text>
+            <text x="304" y="424" text-anchor="middle" fill="#57534e">должность</text>
+
+            <rect x="362" y="384" width="168" height="60" rx="7" fill="#fff" stroke="#ea580c" stroke-width="2" />
+            <text x="446" y="404" text-anchor="middle" font-weight="700" fill="#c2410c">InstructionVersion</text>
+            <text x="446" y="418" text-anchor="middle" fill="#57534e">templateJson + finalText + version</text>
+            <text x="446" y="432" text-anchor="middle" fill="#57534e">центральный объект ДИ</text>
+
+            <rect x="542" y="392" width="118" height="44" rx="7" fill="url(#fullBoxGrad)" stroke="#c2410c" stroke-width="1.5" />
+            <text x="601" y="410" text-anchor="middle" font-weight="700" fill="#c2410c">InstructionLink</text>
+            <text x="601" y="424" text-anchor="middle" fill="#57534e">связи ДИ</text>
+
+            <rect x="672" y="388" width="200" height="52" rx="7" fill="#fff7ed" stroke="#9a3412" stroke-width="1.5" />
+            <text x="772" y="408" text-anchor="middle" font-weight="700" fill="#9a3412">Итог в UI / файле</text>
+            <text x="772" y="422" text-anchor="middle" fill="#57534e">таблица в приложении или DOCX из того же JSON</text>
+          </g>
+
+          <!-- Cross-layer arrows (simplified) -->
+          <g fill="none" stroke-width="1.5">
+            <line x1="63" y1="106" x2="78" y2="168" stroke="#ea580c" marker-end="url(#arrowFull)" />
+            <line x1="151" y1="106" x2="209" y2="164" stroke="#ea580c" marker-end="url(#arrowFull)" />
+            <line x1="243" y1="106" x2="346" y2="168" stroke="#78716c" marker-end="url(#arrowFullSoft)" />
+            <line x1="347" y1="106" x2="488" y2="168" stroke="#78716c" marker-end="url(#arrowFullSoft)" />
+            <line x1="209" y1="220" x2="103" y2="286" stroke="#b45309" stroke-dasharray="4 3" marker-end="url(#arrowFull)" />
+            <line x1="209" y1="220" x2="234" y2="286" stroke="#b45309" stroke-dasharray="4 3" marker-end="url(#arrowFull)" />
+            <line x1="542" y1="308" x2="360" y2="286" stroke="#b45309" marker-end="url(#arrowFull)" />
+            <line x1="446" y1="384" x2="446" y2="336" stroke="#c2410c" stroke-dasharray="5 4" marker-end="url(#arrowFullSoft)" />
+            <line x1="488" y1="216" x2="446" y2="384" stroke="#78716c" stroke-dasharray="4 3" opacity="0.85" />
+            <line x1="777" y1="216" x2="446" y2="396" stroke="#78716c" stroke-dasharray="4 3" opacity="0.85" />
+            <line x1="636" y1="216" x2="360" y2="286" stroke="#b45309" stroke-dasharray="4 3" marker-end="url(#arrowFull)" />
+          </g>
+
+          <text x="480" y="498" text-anchor="middle" font-size="9" fill="#78716c">
+            Защита маршрутов — middleware; лимиты запросов — на генерации и перегенерации. Детали полей моделей см. prisma/schema.prisma в репозитории.
+          </text>
+        </svg>
+
+        <!-- четыре слоя, компактно по ширине -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="flow-svg flow-svg--print" viewBox="0 0 500 838" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="printFullGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#fff7ed" />
+              <stop offset="100%" style="stop-color:#ffffff" />
+            </linearGradient>
+          </defs>
+          <text x="250" y="18" text-anchor="middle" font-size="12" font-weight="800" fill="#1c1917">Полная карта потоков</text>
+          <text x="250" y="34" text-anchor="middle" font-size="9" fill="#78716c">уровни сверху вниз, внутри уровня — две колонки</text>
+
+          <rect x="8" y="44" width="484" height="196" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="1" opacity="0.7" />
+          <text x="18" y="60" font-size="10" font-weight="800" fill="#c2410c">1. Браузер</text>
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="8.5">
+            <rect x="18" y="68" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="132" y="88" text-anchor="middle" font-weight="700" fill="#ea580c">/login</text>
+            <rect x="254" y="68" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="368" y="88" text-anchor="middle" font-weight="700" fill="#ea580c">/ главная ДИ</text>
+            <rect x="18" y="110" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="132" y="130" text-anchor="middle" font-weight="700" fill="#ea580c">/history</text>
+            <rect x="254" y="110" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="368" y="130" text-anchor="middle" font-weight="700" fill="#ea580c">/history/…/edit</text>
+            <rect x="18" y="152" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="132" y="172" text-anchor="middle" font-weight="700" fill="#ea580c">/account</text>
+            <rect x="254" y="152" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="368" y="172" text-anchor="middle" font-weight="700" fill="#ea580c">/admin/users</text>
+            <rect x="18" y="194" width="464" height="34" rx="6" fill="#fff" stroke="#ea580c" stroke-width="1.5" />
+            <text x="250" y="214" text-anchor="middle" font-weight="700" fill="#c2410c">/di-navigator-guide.html (эта справка)</text>
+          </g>
+
+          <rect x="8" y="248" width="484" height="198" rx="10" fill="#ffffff" stroke="#fdba74" stroke-width="1" />
+          <text x="18" y="264" font-size="10" font-weight="800" fill="#c2410c">2. API Next.js</text>
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="8.5">
+            <rect x="18" y="272" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#ea580c" stroke-width="1.3" />
+            <text x="132" y="292" text-anchor="middle" font-weight="700" fill="#ea580c">/api/auth/* · NextAuth</text>
+            <rect x="254" y="272" width="228" height="40" rx="6" fill="#fff" stroke="#ea580c" stroke-width="1.5" />
+            <text x="368" y="290" text-anchor="middle" font-weight="700" fill="#c2410c">POST /api/di/generate</text>
+            <text x="368" y="302" text-anchor="middle" fill="#57534e">должность + подразделение</text>
+            <rect x="18" y="318" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="132" y="338" text-anchor="middle" font-weight="700" fill="#ea580c">GET /api/di/history</text>
+            <rect x="254" y="318" width="228" height="40" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="368" y="338" text-anchor="middle" font-weight="700" fill="#ea580c">/api/di/history/[id]</text>
+            <text x="368" y="350" text-anchor="middle" fill="#57534e">GET / POST / DELETE</text>
+            <rect x="18" y="364" width="228" height="40" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="132" y="384" text-anchor="middle" font-weight="700" fill="#ea580c">POST …/[id]/regenerate</text>
+            <text x="132" y="396" text-anchor="middle" fill="#57534e">блок + поиск</text>
+            <rect x="254" y="364" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="368" y="384" text-anchor="middle" font-weight="700" fill="#ea580c">GET …/export/[id] → DOCX</text>
+            <rect x="18" y="408" width="464" height="34" rx="6" fill="url(#printFullGrad)" stroke="#fdba74" />
+            <text x="250" y="428" text-anchor="middle" font-weight="700" fill="#ea580c">/api/admin/* · /api/account/* (пользователи, пароль)</text>
+          </g>
+
+          <rect x="8" y="454" width="484" height="158" rx="10" fill="#fffbeb" stroke="#fde68a" stroke-width="1" />
+          <text x="18" y="464" font-size="10" font-weight="800" fill="#92400e">3. Внешние сервисы и пост-обработка</text>
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="8.5">
+            <rect x="18" y="472" width="228" height="36" rx="6" fill="#fff" stroke="#d97706" />
+            <text x="132" y="492" text-anchor="middle" font-weight="700" fill="#b45309">assistentus.ru</text>
+            <rect x="254" y="472" width="228" height="36" rx="6" fill="#fff" stroke="#d97706" />
+            <text x="368" y="492" text-anchor="middle" font-weight="700" fill="#b45309">Perplexity API</text>
+            <rect x="18" y="514" width="464" height="32" rx="6" fill="#fff" stroke="#d97706" />
+            <text x="250" y="534" text-anchor="middle" font-weight="700" fill="#b45309">OpenRouter · ответ в JSON по шаблону</text>
+            <rect x="18" y="552" width="464" height="48" rx="6" fill="#fffbeb" stroke="#ca8a04" stroke-width="1.2" />
+            <text x="250" y="572" text-anchor="middle" font-weight="700" fill="#92400e">Сервер: очистка текста, бизнес-правила, Zod, assertStrictStructure</text>
+            <text x="250" y="586" text-anchor="middle" fill="#57534e">единый templateJson для UI и DOCX</text>
+          </g>
+
+          <rect x="8" y="618" width="484" height="178" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="1" opacity="0.65" />
+          <text x="18" y="634" font-size="10" font-weight="800" fill="#c2410c">4. SQLite · Prisma</text>
+          <g font-family="system-ui, Segoe UI, sans-serif" font-size="8.5">
+            <rect x="18" y="642" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#c2410c" />
+            <text x="132" y="662" text-anchor="middle" font-weight="700" fill="#9a3412">User</text>
+            <rect x="254" y="642" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#c2410c" />
+            <text x="368" y="662" text-anchor="middle" font-weight="700" fill="#9a3412">GenerationRun</text>
+            <rect x="18" y="684" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#c2410c" />
+            <text x="132" y="704" text-anchor="middle" font-weight="700" fill="#9a3412">JobTitle</text>
+            <rect x="254" y="684" width="228" height="44" rx="6" fill="#fff" stroke="#ea580c" stroke-width="1.5" />
+            <text x="368" y="702" text-anchor="middle" font-weight="700" fill="#9a3412">InstructionVersion</text>
+            <text x="368" y="716" text-anchor="middle" fill="#57534e">templateJson · версия</text>
+            <rect x="18" y="734" width="228" height="36" rx="6" fill="url(#printFullGrad)" stroke="#c2410c" />
+            <text x="132" y="754" text-anchor="middle" font-weight="700" fill="#9a3412">InstructionLink</text>
+            <rect x="254" y="734" width="228" height="48" rx="6" fill="#fff7ed" stroke="#9a3412" />
+            <text x="368" y="754" text-anchor="middle" font-weight="700" fill="#9a3412">Итог</text>
+            <text x="368" y="768" text-anchor="middle" fill="#57534e">таблица / DOCX</text>
+          </g>
+          <text x="250" y="812" text-anchor="middle" font-size="8.5" fill="#78716c">
+            Сверху — обзорная схема в один ряд; здесь — та же логика компактно по вертикали.
+          </text>
+        </svg>
+        <p class="flow-legend">
+          <strong>Как читать полную схему:</strong> сверху — что видит пользователь; ниже — какие вызовы уходят на сервер; затем — внешние API и этап
+          нормализации/валидации; внизу — что сохраняется в базе. «Упрощённая» схема выше остаётся для быстрого объяснения цепочки в одну линию.
+        </p>
+      </div>
+    </section>
+
+    <section id="pdf" class="no-print" aria-label="Сохранение копии документа">
+      <h2>Сохранение копии</h2>
+      <div class="note">
+        <p style="margin-bottom: 0">
+          Кнопка вверху открывает диалог сохранения. При необходимости отключите в нём колонтитулы (дата, адрес страницы), чтобы в файл попадал только текст документа.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        ООО МПЗ «Мясницкий ряд» · Кадровый Навигатор · документация для внутреннего использования.
+        Актуальную ссылку на приложение уточняйте у администратора (например <code>/</code> на вашем домене).
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

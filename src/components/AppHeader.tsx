@@ -46,6 +46,12 @@ export function AppHeader() {
                 История
               </Link>
               <Link
+                href="/analyze"
+                className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
+              >
+                Проверка ДИ
+              </Link>
+              <Link
                 href="/account"
                 className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
               >
