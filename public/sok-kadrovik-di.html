@@ -63,18 +63,18 @@
       .img {
         display: block;
         width: 100%;
-        max-width: 980px;
+        max-width: 720px;
         border: 1px solid #e5e7eb;
         border-radius: 14px;
-        margin: 10px 0 6px;
+        margin: 10px auto 6px;
       }
       .svg {
         display: block;
         width: 100%;
-        max-width: 980px;
+        max-width: 820px;
         border: 1px solid #e5e7eb;
         border-radius: 14px;
-        margin: 10px 0 6px;
+        margin: 10px auto 6px;
         background: #ffffff;
       }
       .caption {
@@ -82,52 +82,21 @@
         font-size: 12px;
         color: #6b7280;
       }
+      .page-title {
+        margin: 0 0 6px;
+        font-size: 20px;
+        font-weight: 700;
+        color: #111827;
+      }
+      .page-subtitle {
+        margin: 0 0 18px;
+        color: #6b7280;
+      }
     </style>
   </head>
   <body>
-    <h2>Бланк стандартной операционной карты (СОК)</h2>
-    <table>
-      <tr>
-        <th colspan="5" style="text-align:center">Бланк стандартной операционной карты СОК</th>
-      </tr>
-      <tr>
-        <td><b>Дата:</b> 01.04.2026</td>
-        <td><b>№ СОК</b> 1</td>
-        <td><b>страница</b> 1</td>
-        <td><b>Место</b></td>
-        <td>ООО МПЗ «Мясницкий Ряд»</td>
-      </tr>
-      <tr>
-        <td><b>Версия</b> 1</td>
-        <td colspan="4"></td>
-      </tr>
-      <tr>
-        <td><b>Операция:</b></td>
-        <td colspan="4">Порядок работы с веб‑приложением «Кадровик DI» (создание должностной инструкции)</td>
-      </tr>
-      <tr>
-        <td><b>Продолжительность</b></td>
-        <td>3–7 минут</td>
-        <td><b>Выполняет</b></td>
-        <td colspan="2">Пользователь</td>
-      </tr>
-      <tr>
-        <td><b>Разработал</b></td>
-        <td colspan="4">Болдина М.В.</td>
-      </tr>
-      <tr>
-        <td><b>Согласовал</b></td>
-        <td colspan="2">Крайнов А.В.</td>
-        <td><b>Утвердил</b></td>
-        <td>Крайнов А.В.</td>
-      </tr>
-    </table>
-
-    <div class="card">
-      <b>Для кого эта инструкция:</b> для пользователя, который формирует должностные инструкции в приложении.<br />
-      <b>Что получится на выходе:</b> файл <b>DOCX</b>, который можно скачать и сохранить.<br />
-      <span class="muted">Файл доступен по ссылке <code>/sok-kadrovik-di.html</code>.</span>
-    </div>
+    <div class="page-title">Инструкция по работе с приложением «Кадровик DI»</div>
+    <div class="page-subtitle">Создание, проверка и сохранение должностной инструкции.</div>
 
     <h3>Порядок действий</h3>
     <table>
@@ -187,12 +156,7 @@
       </tr>
     </table>
 
-    <img class="img" src="/sok/login-screen.png" alt="Экран авторизации DI" />
-    <p class="caption">Экран «Вход в систему DI».</p>
-    <img class="img" src="/sok/registration-screen.png" alt="Экран регистрации DI" />
-    <p class="caption">Экран «Регистрация» (нужно ввести «Код приглашения»).</p>
-    <img class="img" src="/sok/step-generate-screen.png" alt="Экран генерации DI" />
-    <p class="caption">Скриншот: экран ввода должности, выбора подразделения и кнопка «Сформировать DI».</p>
+    <!-- Фото удалены по требованию: оставляем только текст и таблицы -->
 
     <table>
       <tr>
@@ -268,6 +232,32 @@
         <th style="width: 320px">Подсказка</th>
       </tr>
       <tr>
+        <td>13.1</td>
+        <td>Открыть проверку ДИ и загрузить DOCX</td>
+        <td>
+          Если у вас уже есть готовый файл ДИ в формате <b>DOCX</b>, откройте страницу <code>/analyze</code> (кнопка «Проверка ДИ» в меню),
+          загрузите файл и дождитесь результата проверки.
+        </td>
+        <td>Проверка помогает быстро увидеть, какие части документа требуют доработки.</td>
+      </tr>
+      <tr>
+        <td>13.2</td>
+        <td>Включить проверку по ЕКС/ЕТКС (при необходимости)</td>
+        <td>
+          На странице проверки включите галочку <b>«Проверить соответствие ЕКС/ЕТКС»</b> и запустите проверку.
+        </td>
+        <td>С этой галочкой проверка может идти чуть дольше — это нормально.</td>
+      </tr>
+      <tr>
+        <td>13.3</td>
+        <td>Импортировать результат в редактор</td>
+        <td>
+          Если результат проверки вас устраивает, нажмите <b>«Импортировать в редактор»</b>.
+          Документ откроется в режиме редактирования, где можно править отдельные блоки и сохранить новую версию.
+        </td>
+        <td>Импорт удобен, если нужно привести «старую» ДИ к нужной структуре и обновить формулировки.</td>
+      </tr>
+      <tr>
         <td>14</td>
         <td>Если появилась ошибка «Не удалось сформировать документ…»</td>
         <td>Подождите 1–2 минуты и повторите попытку.</td>
@@ -280,83 +270,6 @@
         <td>Так поддержке проще быстро найти причину и исправить.</td>
       </tr>
     </table>
-
-    <!-- Встроенные "рисунки" (SVG) для Excel: можно заменить реальными скриншотами позже -->
-    <svg class="svg" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема: экран редактора DI">
-      <defs>
-        <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#fff7ed" />
-          <stop offset="1" stop-color="#ffffff" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="1280" height="720" fill="url(#g1)" />
-      <rect x="40" y="40" width="1200" height="640" rx="22" fill="#ffffff" stroke="#fde68a" />
-      <text x="70" y="95" font-size="28" font-family="Arial" fill="#111827" font-weight="700">Редактирование DI</text>
-      <rect x="980" y="70" width="120" height="44" rx="14" fill="#ffffff" stroke="#fdba74" />
-      <text x="1010" y="99" font-size="16" font-family="Arial" fill="#c2410c" font-weight="700">Назад</text>
-      <rect x="1110" y="70" width="140" height="44" rx="14" fill="#fff7ed" stroke="#fdba74" />
-      <text x="1130" y="99" font-size="16" font-family="Arial" fill="#9a3412" font-weight="700">Экспорт DOCX</text>
-
-      <text x="70" y="150" font-size="14" font-family="Arial" fill="#6b7280">История • версия N • можно сохранить как новую версию</text>
-
-      <rect x="70" y="190" width="1140" height="70" rx="16" fill="#ffffff" stroke="#e5e7eb" />
-      <text x="90" y="225" font-size="14" font-family="Arial" fill="#374151" font-weight="700">Должность</text>
-      <rect x="90" y="235" width="520" height="38" rx="12" fill="#f4f4f5" stroke="#e5e7eb" />
-      <text x="645" y="225" font-size="14" font-family="Arial" fill="#374151" font-weight="700">Подразделение</text>
-      <rect x="645" y="235" width="545" height="38" rx="12" fill="#ffffff" stroke="#e5e7eb" />
-
-      <rect x="70" y="290" width="1140" height="66" rx="18" fill="#ffffff" stroke="#e5e7eb" />
-      <rect x="90" y="308" width="150" height="34" rx="12" fill="#ffffff" stroke="#fdba74" />
-      <text x="115" y="331" font-size="14" font-family="Arial" fill="#c2410c" font-weight="700">Предпросмотр</text>
-      <rect x="250" y="308" width="230" height="34" rx="12" fill="#f97316" />
-      <text x="270" y="331" font-size="14" font-family="Arial" fill="#ffffff" font-weight="700">Сохранить как новую версию</text>
-      <text x="90" y="385" font-size="12" font-family="Arial" fill="#6b7280">Подсказка: одна строка = один пункт</text>
-
-      <rect x="70" y="410" width="1140" height="220" rx="22" fill="#ffffff" stroke="#e5e7eb" />
-      <text x="90" y="450" font-size="16" font-family="Arial" fill="#111827" font-weight="700">Блок: «Работник имеет право»</text>
-      <rect x="90" y="470" width="890" height="130" rx="14" fill="#ffffff" stroke="#e5e7eb" />
-      <text x="110" y="505" font-size="13" font-family="Arial" fill="#6b7280">• Пункт 1</text>
-      <text x="110" y="530" font-size="13" font-family="Arial" fill="#6b7280">• Пункт 2</text>
-      <text x="110" y="555" font-size="13" font-family="Arial" fill="#6b7280">• …</text>
-      <rect x="1000" y="480" width="190" height="40" rx="14" fill="#ffffff" stroke="#fdba74" />
-      <text x="1018" y="506" font-size="14" font-family="Arial" fill="#c2410c" font-weight="700">Перегенерировать</text>
-      <text x="1000" y="545" font-size="12" font-family="Arial" fill="#6b7280">Если блок неудачный —</text>
-      <text x="1000" y="563" font-size="12" font-family="Arial" fill="#6b7280">обновите только его.</text>
-    </svg>
-    <p class="caption">Иллюстрация: в редакторе есть «Предпросмотр», «Сохранить как новую версию» и «Перегенерировать» отдельные блоки.</p>
-
-    <svg class="svg" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема: экран истории">
-      <defs>
-        <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#fff7ed" />
-          <stop offset="1" stop-color="#ffffff" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="1280" height="720" fill="url(#g2)" />
-      <rect x="40" y="40" width="1200" height="640" rx="22" fill="#ffffff" stroke="#fde68a" />
-      <text x="70" y="95" font-size="28" font-family="Arial" fill="#111827" font-weight="700">История</text>
-      <text x="70" y="130" font-size="14" font-family="Arial" fill="#6b7280">Здесь хранятся версии документов. Откройте нужную и при необходимости отредактируйте.</text>
-
-      <rect x="70" y="170" width="1140" height="64" rx="16" fill="#ffffff" stroke="#e5e7eb" />
-      <text x="90" y="208" font-size="14" font-family="Arial" fill="#374151" font-weight="700">Поиск/ориентир:</text>
-      <text x="210" y="208" font-size="14" font-family="Arial" fill="#6b7280">должность + версия + дата</text>
-
-      <rect x="70" y="260" width="1140" height="350" rx="18" fill="#ffffff" stroke="#e5e7eb" />
-      <rect x="90" y="285" width="1100" height="64" rx="14" fill="#fff7ed" />
-      <text x="110" y="325" font-size="16" font-family="Arial" fill="#111827" font-weight="700">Инженер технической поддержки</text>
-      <text x="860" y="325" font-size="14" font-family="Arial" fill="#6b7280">версия 3 • 27.03</text>
-      <rect x="1040" y="300" width="130" height="38" rx="12" fill="#ffffff" stroke="#fdba74" />
-      <text x="1062" y="325" font-size="14" font-family="Arial" fill="#c2410c" font-weight="700">Открыть</text>
-
-      <rect x="90" y="365" width="1100" height="64" rx="14" fill="#ffffff" stroke="#e5e7eb" />
-      <text x="110" y="405" font-size="16" font-family="Arial" fill="#111827" font-weight="700">Системный аналитик</text>
-      <text x="910" y="405" font-size="14" font-family="Arial" fill="#6b7280">версия 1 • 26.03</text>
-      <rect x="1040" y="380" width="130" height="38" rx="12" fill="#ffffff" stroke="#fdba74" />
-      <text x="1062" y="405" font-size="14" font-family="Arial" fill="#c2410c" font-weight="700">Открыть</text>
-
-      <text x="90" y="645" font-size="12" font-family="Arial" fill="#6b7280">Подсказка: выбирайте последнюю версию, если не уверены.</text>
-    </svg>
-    <p class="caption">Иллюстрация: в «Истории» можно открыть нужную версию и продолжить работу.</p>
 
     <hr />
 

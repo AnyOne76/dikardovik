@@ -35,7 +35,7 @@ export function AppHeader() {
             href="/readme"
             className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
           >
-            Документация
+            Инструкция
           </Link>
           {session?.user && (
             <>

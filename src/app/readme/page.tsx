@@ -4,8 +4,8 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 export const metadata = {
-  title: "Документация | Кадровик DI",
-  description: "README проекта: запуск, тесты, GitHub, деплой на Beget",
+  title: "Инструкция | Кадровик DI",
+  description: "Инструкция по работе с приложением",
 };
 
 const readmeArticleClass =
@@ -14,6 +14,11 @@ const readmeArticleClass =
   "[&_h2]:mt-9 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-zinc-900 " +
   "[&_h3]:mt-7 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-zinc-800 " +
   "[&_p]:mt-3 [&_strong]:font-semibold [&_strong]:text-zinc-900 " +
+  "[&_table]:mt-4 [&_table]:w-full [&_table]:border-collapse [&_table]:text-[14px] " +
+  "[&_thead_th]:bg-orange-50 [&_thead_th]:text-zinc-900 " +
+  "[&_th]:border [&_th]:border-orange-100 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:align-top " +
+  "[&_td]:border [&_td]:border-orange-100 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_td]:whitespace-normal " +
+  "[&_tr:nth-child(even)_td]:bg-zinc-50/50 " +
   "[&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 " +
   "[&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-6 " +
   "[&_li]:mt-1.5 [&_li]:pl-0.5 " +
@@ -27,14 +32,10 @@ export default async function ReadmePage() {
   const raw = await readFile(join(process.cwd(), "README.md"), "utf-8");
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 pb-16 text-zinc-900">
+    <main className="mx-auto max-w-6xl px-4 py-8 pb-16 text-zinc-900">
       <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)] sm:p-8">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Документация</h1>
-        <p className="mt-3 text-sm text-zinc-600">
-          GitHub показывает тот же текст в корне репозитория как README — это не «синхронизация» с приложением, а один
-          файл <code className="rounded bg-orange-50 px-1.5 py-0.5 font-mono text-xs">README.md</code>. Здесь он
-          читается напрямую из проекта, чтобы в интерфейсе был актуальный текст после деплоя.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Инструкция</h1>
+
         <article className={`mt-8 ${readmeArticleClass}`}>
           <Markdown remarkPlugins={[remarkGfm]}>{raw}</Markdown>
         </article>
