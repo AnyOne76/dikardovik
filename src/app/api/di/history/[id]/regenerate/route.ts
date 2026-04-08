@@ -7,6 +7,7 @@ import { isDirectorRole, isLeadershipRole, isResponsibilityNoiseLine, isTailNote
 import { loadEnvConfig } from "@next/env";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-meta";
+import { getResolvedApiConfig } from "@/lib/api-settings";
 import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
 
 loadEnvConfig(process.cwd());
@@ -202,8 +203,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "Too many regenerate requests" }, { status: 429 });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+  const apiConfig = await getResolvedApiConfig();
+  const apiKey = apiConfig.openrouterApiKey.trim();
+  const model = apiConfig.openrouterModel;
   if (!apiKey) return NextResponse.json({ error: "OpenRouter API key missing" }, { status: 500 });
 
   let payload: InstructionPayload;
@@ -267,12 +269,15 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
   let currentFactsText = "";
   try {
-    const facts = await fetchPerplexityFactsForSection({
-      jobTitle: payload.templateMeta.positionName,
-      department: payload.templateMeta.departmentName,
-      sectionHuman,
-      desiredCount,
-    });
+    const facts = await fetchPerplexityFactsForSection(
+      {
+        jobTitle: payload.templateMeta.positionName,
+        department: payload.templateMeta.departmentName,
+        sectionHuman,
+        desiredCount,
+      },
+      apiConfig,
+    );
     currentFactsText = facts.snippets.join("\n").slice(0, 6000);
   } catch (e) {
     // Search must not block editing; fallback to generation from existing wording.
