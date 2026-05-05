@@ -243,7 +243,7 @@ export async function fetchPerplexityFactsForSection(
     .slice(0, targetCount);
 
   if (!snippets.length) {
-    throw new Error("Не удалось получить данные для секции ни с assistentus, ни через Perplexity.");
+    return { snippets: [], model };
   }
 
   return { snippets, model };

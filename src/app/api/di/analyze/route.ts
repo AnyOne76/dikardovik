@@ -1,7 +1,12 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { analyzeInstructionFromText, checkComplianceEksEtks, extractDocxText } from "@/lib/di-analyze";
+import {
+  analyzeInstructionFromText,
+  checkComplianceEksEtks,
+  extractInstructionFileText,
+  isSupportedWordUploadName,
+} from "@/lib/di-analyze";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-meta";
 
@@ -27,22 +32,11 @@ export async function POST(request: Request) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
     }
-    const lower = file.name.toLowerCase();
-    if (lower.endsWith(".doc") && !lower.endsWith(".docx")) {
+    if (!isSupportedWordUploadName(file.name)) {
       return NextResponse.json(
         {
           error: "unsupported_format",
-          message:
-            "Файлы .doc не поддерживаются. Откройте документ в Word и сохраните как .docx, затем загрузите снова.",
-        },
-        { status: 400 },
-      );
-    }
-    if (!lower.endsWith(".docx")) {
-      return NextResponse.json(
-        {
-          error: "unsupported_format",
-          message: "Поддерживается только загрузка файлов в формате .docx.",
+          message: "Поддерживаются файлы Word в форматах .docx и .doc.",
         },
         { status: 400 },
       );
@@ -55,11 +49,15 @@ export async function POST(request: Request) {
       );
     }
     try {
-      documentText = await extractDocxText(buf);
+      documentText = await extractInstructionFileText(buf, file.name);
     } catch (e) {
-      console.error("DOCX extract failed", e);
+      console.error("Word file extract failed", e);
       return NextResponse.json(
-        { error: "docx_read_failed", message: "Не удалось прочитать DOCX." },
+        {
+          error: "document_read_failed",
+          message:
+            "Не удалось прочитать файл Word. Убедитесь, что это настоящий .doc или .docx; при необходимости откройте в Word и сохраните заново.",
+        },
         { status: 400 },
       );
     }
@@ -95,11 +93,25 @@ export async function POST(request: Request) {
   const url = new URL(request.url);
   const compliance = url.searchParams.get("compliance") === "1";
 
-  const result = await analyzeInstructionFromText(documentText);
-  if (!compliance || !result.ok || !result.payload) {
-    return NextResponse.json(result);
-  }
+  try {
+    const result = await analyzeInstructionFromText(documentText);
+    if (!compliance || !result.payload) {
+      return NextResponse.json(result);
+    }
 
-  const report = await checkComplianceEksEtks(result.payload);
-  return NextResponse.json({ ...result, compliance: report });
+    const report = await checkComplianceEksEtks(result.payload);
+    return NextResponse.json({ ...result, compliance: report });
+  } catch (e) {
+    console.error("POST /api/di/analyze failed", e);
+    return NextResponse.json(
+      {
+        error: "internal_error",
+        message:
+          e instanceof Error
+            ? e.message
+            : "Внутренняя ошибка сервера при анализе или проверке ЕКС/ЕТКС. Попробуйте снять галочку ЕКС/ЕТКС или пересохранить файл в .docx.",
+      },
+      { status: 500 },
+    );
+  }
 }

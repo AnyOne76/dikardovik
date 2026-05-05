@@ -3,7 +3,15 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertStrictStructure, instructionSchema, type InstructionPayload } from "@/lib/di-contract";
-import { isDirectorRole, isLeadershipRole, isResponsibilityNoiseLine, isTailNoteLine } from "@/lib/di-rules";
+import { applyTripleTextQuality } from "@/lib/di-text-quality";
+import {
+  capitalizeListItems,
+  ensureResponsibilityItems,
+  FIXED_SUBORDINATION_LINES,
+  isLeadershipRole,
+  isResponsibilityNoiseLine,
+  isTailNoteLine,
+} from "@/lib/di-rules";
 import { loadEnvConfig } from "@next/env";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-meta";
@@ -14,7 +22,6 @@ loadEnvConfig(process.cwd());
 
 const MANDATORY_HIRING_TEXT =
   "Работник назначается на должность и освобождается от должности в установленном порядке действующим трудовым законодательством и приказом генерального директора организации";
-const MANDATORY_DIRECTOR_SUBORDINATION_TEXT = "Генеральному директору";
 
 const MANDATORY_LINEAR_DUTIES = [
   "Соблюдать правила трудового распорядка, установленного в компании;",
@@ -73,30 +80,19 @@ function normalizePayload(payload: InstructionPayload): InstructionPayload {
   p.sections.duties.items = p.sections.duties.items.map(normalizeTerminology);
   p.sections.rights.items = p.sections.rights.items.map(normalizeTerminology);
   p.sections.responsibility.items = p.sections.responsibility.items.map(normalizeTerminology);
+  p.sections.general.requiredQualification = capitalizeListItems(p.sections.general.requiredQualification);
+  p.sections.general.subordination = capitalizeListItems(p.sections.general.subordination);
+  p.sections.general.hiringProcedure = capitalizeListItems(p.sections.general.hiringProcedure);
+  p.sections.general.substitutionProcedure = capitalizeListItems(p.sections.general.substitutionProcedure);
+  p.sections.general.regulatoryDocuments = capitalizeListItems(p.sections.general.regulatoryDocuments);
+  p.sections.general.localRegulations = capitalizeListItems(p.sections.general.localRegulations);
+  p.sections.general.employeeMustKnow = capitalizeListItems(p.sections.general.employeeMustKnow);
+  p.sections.duties.items = capitalizeListItems(p.sections.duties.items);
+  p.sections.rights.items = capitalizeListItems(p.sections.rights.items);
+  p.sections.responsibility.items = capitalizeListItems(p.sections.responsibility.items);
 
   p.signatures.coordinator = normalizeTerminology(p.signatures.coordinator);
   return p;
-}
-
-function cleanSubordinationForEdit(input: string[]): string[] {
-  const removalPatterns: RegExp[] = [
-    /на\s*время\s*отсутствия/i,
-    /функц(ии|ия)\s*на\s*время\s*отсутствия/i,
-    /исполняет\s+назначенн(о(е|ый)|ая|ый|ую|ого|ых)\s+лиц(о|а)/i,
-    /в\s*прямом\s*подчинени[еи]\s*находится/i,
-    /в\s*подчинении\s*находится/i,
-    /в\s*его\s*подчинении/i,
-    /ему\s*подчиня(ют|ются|ется)/i,
-    /ему\s*подчинен(у|а|ы)/i,
-  ];
-
-  const cleaned = (input ?? [])
-    .map((s) => String(s ?? "").trim())
-    .filter(Boolean)
-    .filter((line) => !removalPatterns.some((re) => re.test(line)));
-
-  if (cleaned.length === 0) return ["Подчиняется непосредственному руководителю подразделения"];
-  return [cleaned[0]];
 }
 
 async function openrouterGenerateItems(opts: {
@@ -217,8 +213,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "Invalid templateJson" }, { status: 400 });
   }
 
+  payload.sections.general.subordination = FIXED_SUBORDINATION_LINES;
+  if (section === "subordination") {
+    return NextResponse.json({ templateJson: payload });
+  }
+
   const jobTitle = payload.templateMeta.positionName;
-  const isDirector = isDirectorRole(jobTitle);
   const isLeadership = isLeadershipRole(jobTitle);
 
   // Desired count = current count, so UI length remains stable.
@@ -309,14 +309,6 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     mandatoryRules.push(`Прием на работу всегда должен быть ровно: ${MANDATORY_HIRING_TEXT}`);
   }
 
-  if (section === "subordination") {
-    mandatoryRules.push(
-      isDirector
-        ? `Подчиненность для директора всегда: "${MANDATORY_DIRECTOR_SUBORDINATION_TEXT}"`
-        : 'Подчиненность должна содержать только "кому подчиняется" (без "на время отсутствия" и без фраз типа "ему подчиняются").',
-    );
-  }
-
   if (section === "duties.items") {
     mandatoryRules.push(
       isLeadership
@@ -365,10 +357,7 @@ ${mandatoryRules.join("\n")}
   // Always enforce fixed rules that must never break.
   payload.sections.general.hiringProcedure = [MANDATORY_HIRING_TEXT];
 
-  if (section === "subordination") {
-    if (isDirector) payload.sections.general.subordination = [MANDATORY_DIRECTOR_SUBORDINATION_TEXT];
-    else payload.sections.general.subordination = cleanSubordinationForEdit(payload.sections.general.subordination);
-  }
+  payload.sections.general.subordination = FIXED_SUBORDINATION_LINES;
 
   if (section === "duties.items") {
     const mandatory = isLeadership ? MANDATORY_LEADERSHIP_DUTIES : MANDATORY_LINEAR_DUTIES;
@@ -386,19 +375,15 @@ ${mandatoryRules.join("\n")}
       .filter((l) => !isResponsibilityNoiseLine(l));
 
     if (filtered.length === 0) {
-      payload.sections.responsibility.items = ["Нести ответственность за качество и сроки выполнения задач"];
+      payload.sections.responsibility.items = ensureResponsibilityItems([], desiredCount);
     } else {
       // Сохраняем стабильную длину списка в UI, но заполняем только "чистым" контентом.
-      payload.sections.responsibility.items = padOrTrim(
-        filtered,
-        desiredCount,
-        filtered,
-        "Нести ответственность за качество, сроки и безопасность выполнения работ",
-      );
+      payload.sections.responsibility.items = ensureResponsibilityItems(filtered, desiredCount);
     }
   }
 
   payload = normalizePayload(payload);
+  payload = await applyTripleTextQuality(payload, { resolvedApi: apiConfig });
   assertStrictStructure(payload);
   instructionSchema.parse(payload); // re-check full schema
 

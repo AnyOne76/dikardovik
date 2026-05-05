@@ -2,11 +2,11 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getResolvedApiConfig } from "@/lib/api-settings";
 import { assertStrictStructure, instructionSchema, toPrintableText, type InstructionPayload } from "@/lib/di-contract";
-import { isDirectorRole } from "@/lib/di-rules";
+import { applyTripleTextQuality } from "@/lib/di-text-quality";
+import { capitalizeListItems, FIXED_SUBORDINATION_LINES } from "@/lib/di-rules";
 
-const MANDATORY_LINEAR_SUBORDINATION_FALLBACK = "Подчиняется непосредственному руководителю подразделения";
-const MANDATORY_DIRECTOR_SUBORDINATION_TEXT = "Генеральному директору";
 
 function normalizeTerminology(text: string): string {
   return String(text ?? "")
@@ -38,34 +38,19 @@ function normalizePayloadTerminology(payload: InstructionPayload): InstructionPa
   p.sections.duties.items = p.sections.duties.items.map((x) => normalizeTerminology(x));
   p.sections.rights.items = p.sections.rights.items.map((x) => normalizeTerminology(x));
   p.sections.responsibility.items = p.sections.responsibility.items.map((x) => normalizeTerminology(x));
+  p.sections.general.requiredQualification = capitalizeListItems(p.sections.general.requiredQualification);
+  p.sections.general.subordination = capitalizeListItems(p.sections.general.subordination);
+  p.sections.general.hiringProcedure = capitalizeListItems(p.sections.general.hiringProcedure);
+  p.sections.general.substitutionProcedure = capitalizeListItems(p.sections.general.substitutionProcedure);
+  p.sections.general.regulatoryDocuments = capitalizeListItems(p.sections.general.regulatoryDocuments);
+  p.sections.general.localRegulations = capitalizeListItems(p.sections.general.localRegulations);
+  p.sections.general.employeeMustKnow = capitalizeListItems(p.sections.general.employeeMustKnow);
+  p.sections.duties.items = capitalizeListItems(p.sections.duties.items);
+  p.sections.rights.items = capitalizeListItems(p.sections.rights.items);
+  p.sections.responsibility.items = capitalizeListItems(p.sections.responsibility.items);
 
   p.signatures.coordinator = normalizeTerminology(p.signatures.coordinator);
   return p;
-}
-
-function cleanSubordinationForEdit(input: string[]): string[] {
-  const removalPatterns: RegExp[] = [
-    // Wrong content for "Подчиненность": sometimes LLM puts substitution clause here.
-    /на\s*время\s*отсутствия/i,
-    /функц(ии|ия)\s*на\s*время\s*отсутствия/i,
-    /исполняет\s+назначенн(о(е|ый)|ая|ый|ую|ого|ых)\s+лиц(о|а)/i,
-    // Wrong orientation: "в подчинении находится ..." (means employee has subordinates)
-    /в\s*прямом\s*подчинени[еи]\s*находится/i,
-    /в\s*подчинении\s*находится/i,
-    /в\s*его\s*подчинении/i,
-    // Another wrong orientation: "ему подчиняются/подчинен(а)"
-    /ему\s*подчиня(ют|ются|ется)/i,
-    /ему\s*подчинен(у|а|ы)/i,
-  ];
-
-  const cleaned = (input ?? [])
-    .map((s) => String(s ?? "").trim())
-    .filter(Boolean)
-    .filter((line) => !removalPatterns.some((re) => re.test(line)));
-
-  // "Подчиненность" должна быть ровно про "кому подчиняется", а не список.
-  if (cleaned.length === 0) return [MANDATORY_LINEAR_SUBORDINATION_FALLBACK];
-  return [cleaned[0]];
 }
 
 export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -113,6 +98,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
     const payload = instructionSchema.parse(row.templateJson);
     assertStrictStructure(payload);
     const normalized = normalizePayloadTerminology(payload);
+    normalized.sections.general.subordination = FIXED_SUBORDINATION_LINES;
     safeTemplateJson = normalized;
     safeFinalText = toPrintableText(normalized);
   } catch {
@@ -165,19 +151,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "Invalid DI payload" }, { status: 400 });
   }
 
-  // Post-process "Подчиненность" for edit mode: ensure it contains only "кому подчиняется".
-  payload.sections.general.subordination = cleanSubordinationForEdit(payload.sections.general.subordination);
-  if (isDirectorRole(payload.templateMeta.positionName)) {
-    payload.sections.general.subordination = [MANDATORY_DIRECTOR_SUBORDINATION_TEXT];
-  }
+  payload.sections.general.subordination = FIXED_SUBORDINATION_LINES;
 
   // Enforce terminology rules even when user edited text manually.
   const normalized = normalizePayloadTerminology(payload) as typeof payload;
-  payload.templateMeta.positionName = normalized.templateMeta.positionName;
-  payload.templateMeta.departmentName = normalized.templateMeta.departmentName;
-  payload.templateMeta.approvedBy = normalized.templateMeta.approvedBy;
-  payload.sections = normalized.sections;
-  payload.signatures = normalized.signatures;
+  payload = await applyTripleTextQuality(normalized, { resolvedApi: await getResolvedApiConfig() });
+  assertStrictStructure(payload);
 
   const finalText = toPrintableText(payload);
 

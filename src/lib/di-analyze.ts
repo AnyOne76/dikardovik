@@ -1,4 +1,5 @@
 import mammoth from "mammoth";
+import WordExtractor from "word-extractor";
 import { loadEnvConfig } from "@next/env";
 import { z } from "zod";
 import {
@@ -7,17 +8,55 @@ import {
   toPrintableText,
   type InstructionPayload,
 } from "@/lib/di-contract";
+import { patchEmptyInstructionLists } from "@/lib/di-rules";
 import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
 
 loadEnvConfig(process.cwd());
 
+const legacyWordExtractor = new WordExtractor();
+
 const MAX_TEXT_CHARS = 100_000;
 const ANALYZE_TIMEOUT_MS = 60_000;
 const COMPLIANCE_TIMEOUT_MS = 60_000;
+const VERIFY_TIMEOUT_MS = 55_000;
+/** Фрагмент исходника и JSON для второго прохода (лимит символов на промпт). */
+const VERIFY_SOURCE_CHARS = 52_000;
+const VERIFY_JSON_CHARS = 45_000;
 
 export async function extractDocxText(buffer: Buffer): Promise<string> {
   const result = await mammoth.extractRawText({ buffer });
   return (result.value ?? "").trim();
+}
+
+/** Legacy Word 97–2003 (.doc, OLE). Тело и примечания/сноски — как доп. контекст для анализа. */
+export async function extractLegacyDocText(buffer: Buffer): Promise<string> {
+  const doc = await legacyWordExtractor.extract(buffer);
+  const parts: string[] = [];
+  const body = doc.getBody();
+  if (body?.trim()) parts.push(body.trim());
+  const footnotes = doc.getFootnotes();
+  if (footnotes?.trim()) parts.push(footnotes.trim());
+  const endnotes = doc.getEndnotes();
+  if (endnotes?.trim()) parts.push(endnotes.trim());
+  return parts.join("\n\n").trim();
+}
+
+export function isSupportedWordUploadName(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  const isDocx = lower.endsWith(".docx");
+  const isDoc = lower.endsWith(".doc") && !isDocx;
+  return isDocx || isDoc;
+}
+
+export async function extractInstructionFileText(buffer: Buffer, fileName: string): Promise<string> {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".docx")) {
+    return extractDocxText(buffer);
+  }
+  if (lower.endsWith(".doc")) {
+    return extractLegacyDocText(buffer);
+  }
+  throw new Error("unsupported_word_extension");
 }
 
 export type AnalyzeIssue = { code: string; message: string; path?: string };
@@ -69,6 +108,184 @@ function zodIssuesToAnalyzeIssues(error: z.ZodError): AnalyzeIssue[] {
     message: issue.message,
     path: issue.path.length ? issue.path.map(String).join(".") : undefined,
   }));
+}
+
+const extractionVerifyResponseSchema = z.object({
+  findings: z
+    .array(
+      z.object({
+        jsonPath: z.string().optional(),
+        severity: z.enum(["error", "warning"]).default("error"),
+        detail: z.string().min(3),
+      }),
+    )
+    .default([]),
+});
+
+/**
+ * Второй проход: другая роль промпта, сверка JSON с исходником (галлюцинации, оскорбления, чужой смысл).
+ * При сбое сети/разбора — не блокируем анализ, только предупреждение в issues.
+ */
+async function verifyExtractionAgainstSource(
+  documentText: string,
+  payload: InstructionPayload,
+  apiKey: string,
+  verifyModel: string,
+): Promise<{ blocked: boolean; issues: AnalyzeIssue[]; skipped?: boolean }> {
+  const disabled = (process.env.OPENROUTER_VERIFY_DISABLED ?? "").trim();
+  if (disabled === "1" || disabled.toLowerCase() === "true") {
+    return { blocked: false, issues: [] };
+  }
+
+  const source = documentText.slice(0, VERIFY_SOURCE_CHARS);
+  const jsonSlice = JSON.stringify(payload).slice(0, VERIFY_JSON_CHARS);
+
+  const prompt = `Ты независимый контролёр качества. Другая модель извлекла JSON должностной инструкции из текста документа.
+
+Задача: найти только РЕАЛЬНЫЕ проблемы — галлюцинации, текст которого нельзя обосновать исходником, абсурдные или непрофессиональные/оскорбительные вставки, явно чуждые кадровому документу формулировки.
+
+Нормально: аккуратная перефразировка, разбиение/склейка пунктов, если смысл взят из исходника.
+
+Если сомневаешься — НЕ добавляй пункт в findings (лучше пропустить, чем ложное срабатывание).
+
+Верни ТОЛЬКО JSON:
+{"findings":[{"jsonPath":"опционально путь в JSON","severity":"error","detail":"кратко по-русски"}]}
+
+severity: "error" — точно неприемлемо; "warning" — заметное расхождение с исходником без явной абсурдности.
+
+ИСХОДНЫЙ ТЕКСТ (фрагмент):
+---
+${source}
+---
+
+ИЗВЛЕЧЁННЫЙ JSON (фрагмент):
+---
+${jsonSlice}
+---
+`;
+
+  let response: Response;
+  try {
+    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        model: verifyModel,
+        temperature: 0,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+  } catch (e) {
+    return {
+      blocked: false,
+      issues: [
+        {
+          code: "extraction_verify_skipped",
+          message: `Двойная проверка не выполнена: ${e instanceof Error ? e.message : String(e)}. Результат первого прохода показан без подтверждения второй моделью.`,
+        },
+      ],
+      skipped: true,
+    };
+  }
+
+  if (!response.ok) {
+    const t = await response.text().catch(() => "");
+    return {
+      blocked: false,
+      issues: [
+        {
+          code: "extraction_verify_skipped",
+          message: `Двойная проверка не выполнена (HTTP ${response.status}). ${t.slice(0, 160)}`,
+        },
+      ],
+      skipped: true,
+    };
+  }
+
+  const rawBody = await response.text().catch(() => "");
+  let verifyChatData: { choices?: { message?: { content?: string } }[] };
+  try {
+    verifyChatData = JSON.parse(rawBody) as typeof verifyChatData;
+  } catch {
+    const trimmed = rawBody.trim();
+    const hint = trimmed ? trimmed.slice(0, 220).replace(/\s+/g, " ") : "";
+    const looksHtml = /^<!doctype|^<html[\s>]/i.test(trimmed);
+    const tail = trimmed.length > 220 ? "…" : "";
+    const extra = !hint
+      ? "Пустой ответ — проверьте OPENROUTER_API_KEY, сеть и лимиты провайдера."
+      : looksHtml
+        ? "Пришёл HTML вместо JSON (часто прокси, VPN или блокировка). "
+        : "";
+    return {
+      blocked: false,
+      issues: [
+        {
+          code: "extraction_verify_skipped",
+          message: `Двойная проверка не выполнена: ответ сервиса не JSON. ${extra}${hint ? `Фрагмент: ${hint}${tail}` : ""}`,
+        },
+      ],
+      skipped: true,
+    };
+  }
+  const content = verifyChatData?.choices?.[0]?.message?.content || "";
+  let parsed: unknown;
+  try {
+    parsed = parseJsonFromLlmContent(content);
+  } catch {
+    return {
+      blocked: false,
+      issues: [
+        {
+          code: "extraction_verify_skipped",
+          message: "Двойная проверка не выполнена: не удалось разобрать ответ контролёра.",
+        },
+      ],
+      skipped: true,
+    };
+  }
+
+  const safe = extractionVerifyResponseSchema.safeParse(parsed);
+  if (!safe.success) {
+    return {
+      blocked: false,
+      issues: [
+        {
+          code: "extraction_verify_skipped",
+          message: "Двойная проверка не выполнена: неверный формат ответа контролёра.",
+        },
+      ],
+      skipped: true,
+    };
+  }
+
+  const { findings } = safe.data;
+  if (!findings.length) {
+    return { blocked: false, issues: [] };
+  }
+
+  const blocking = findings.some((f) => f.severity === "error");
+  const issues: AnalyzeIssue[] = findings.map((f) => ({
+    code: f.severity === "error" ? "extraction_verify_error" : "extraction_verify_warning",
+    message: f.detail,
+    path: f.jsonPath,
+  }));
+
+  return { blocked: blocking, issues };
+}
+
+/** Публичная обёртка: сверка готового JSON с текстом исходного документа (второй проход анализа). */
+export async function verifyInstructionPayloadAgainstDocumentText(
+  documentText: string,
+  payload: InstructionPayload,
+  apiKey: string,
+  verifyModel: string,
+): Promise<{ blocked: boolean; issues: AnalyzeIssue[]; skipped?: boolean }> {
+  return verifyExtractionAgainstSource(documentText, payload, apiKey, verifyModel);
 }
 
 export async function analyzeInstructionFromText(documentText: string): Promise<AnalyzeResult> {
@@ -126,6 +343,7 @@ export async function analyzeInstructionFromText(documentText: string): Promise<
 Правила:
 - Каждый пункт списка — отдельная строка в массиве.
 - Переноси формулировки из текста документа; не придумывай новые обязанности и права, если они есть в тексте.
+- Не добавляй отсебятину, оскорбления, шутки и формулировки вне кадрового документа; каждый пункт должен опираться на смысл исходного текста.
 - Если какого-то блока в документе нет — заполни минимально допустимым содержанием по смыслу остального текста.
 - acknowledgementSlots: целое число от 1 до 20 (по числу строк ознакомления в документе, иначе 8).
 - Верни ТОЛЬКО JSON без пояснений до и после.
@@ -178,8 +396,24 @@ ${text}
     };
   }
 
-  const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content || "";
+  let analyzeChatData: { choices?: { message?: { content?: string } }[] };
+  try {
+    analyzeChatData = (await response.json()) as typeof analyzeChatData;
+  } catch (e) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "openrouter_json",
+          message: `Ответ сервиса анализа не удалось разобрать как JSON: ${e instanceof Error ? e.message : String(e)}`,
+        },
+      ],
+      model,
+      extractedTextLength,
+      truncated,
+    };
+  }
+  const content = analyzeChatData?.choices?.[0]?.message?.content || "";
   let parsed: unknown;
   try {
     parsed = parseJsonFromLlmContent(content);
@@ -199,7 +433,7 @@ ${text}
     };
   }
 
-  const safe = instructionSchema.safeParse(parsed);
+  const safe = instructionSchema.safeParse(patchEmptyInstructionLists(parsed));
   if (!safe.success) {
     return {
       ok: false,
@@ -223,11 +457,26 @@ ${text}
     };
   }
 
+  const verifyModel = (process.env.OPENROUTER_VERIFY_MODEL ?? "").trim() || model;
+  const verify = await verifyExtractionAgainstSource(text, safe.data, apiKey, verifyModel);
+
+  if (verify.blocked) {
+    return {
+      ok: false,
+      payload: safe.data,
+      printablePreview: toPrintableText(safe.data),
+      issues: verify.issues,
+      model,
+      extractedTextLength,
+      truncated,
+    };
+  }
+
   return {
     ok: true,
     payload: safe.data,
     printablePreview: toPrintableText(safe.data),
-    issues: [],
+    issues: verify.issues,
     model,
     extractedTextLength,
     truncated,
@@ -367,7 +616,22 @@ ${JSON.stringify(payload).slice(0, 60_000)}
     };
   }
 
-  const data = await resp.json();
+  let data: { choices?: { message?: { content?: string } }[] };
+  try {
+    data = (await resp.json()) as typeof data;
+  } catch (e) {
+    return {
+      ok: false,
+      sonarModel,
+      issues: [
+        {
+          section: "general",
+          severity: "warning",
+          message: `Ответ сервиса проверки не JSON: ${e instanceof Error ? e.message : String(e)}`,
+        },
+      ],
+    };
+  }
   const content = data?.choices?.[0]?.message?.content ?? "";
   let parsed: unknown;
   try {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getFinalNoteLines } from "@/lib/di-rules";
+import { FIXED_SUBORDINATION_LINES, getFinalNoteLines } from "@/lib/di-rules";
 
 export const fixedHeaders = {
   approve: "У Т В Е Р Ж Д А Ю",
@@ -79,7 +79,7 @@ export function toPrintableText(payload: InstructionPayload): string {
     sections.general.heading,
     fieldToText("Требуемая квалификация и стаж работы по данной должности", sections.general.requiredQualification),
     "",
-    fieldToText("Подчиненность", sections.general.subordination),
+    fieldToText("Подчиненность", FIXED_SUBORDINATION_LINES),
     "",
     fieldToText("Прием на работу", sections.general.hiringProcedure),
     "",

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { instructionSchema } from "@/lib/di-contract";
+import { listInstructionPayloadChanges, type InstructionFieldChange } from "@/lib/di-payload-diff";
 
 type AnalyzeIssue = { code: string; message: string; path?: string };
 
@@ -38,6 +40,8 @@ type AnalyzeResponse = {
     sonarModel?: string;
     note?: string;
   };
+  /** Подсказка после повторной проверки (сверка с файлом и т.п.) */
+  verifyNote?: string | null;
   extractedTextLength: number;
   truncated: boolean;
 };
@@ -47,6 +51,10 @@ export default function AnalyzePage() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [improving, setImproving] = useState(false);
+  const [improveHint, setImproveHint] = useState<string | null>(null);
+  const [improveDiff, setImproveDiff] = useState<InstructionFieldChange[]>([]);
+  const [exporting, setExporting] = useState(false);
   const [checkCompliance, setCheckCompliance] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
@@ -55,8 +63,10 @@ export default function AnalyzePage() {
     e.preventDefault();
     setError(null);
     setResult(null);
+    setImproveHint(null);
+    setImproveDiff([]);
     if (!file) {
-      setError("Выберите файл .docx.");
+      setError("Выберите файл .doc или .docx.");
       return;
     }
     setLoading(true);
@@ -89,17 +99,17 @@ export default function AnalyzePage() {
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">Проверка готовой должностной инструкции</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Загрузите документ в формате <strong>.docx</strong>. Файлы .doc не поддерживаются — пересохраните в Word как
-          docx.
+          Загрузите документ Word в формате <strong>.docx</strong> или <strong>.doc</strong>. Для старых файлов текст
+          извлекается на сервере; при странных артефактах пересохраните документ в Word как .docx и загрузите снова.
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm">
         <label className="block text-sm font-medium text-zinc-800">
-          Файл DOCX
+          Файл Word (.doc / .docx)
           <input
             type="file"
-            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="mt-2 block w-full text-sm text-zinc-700 file:mr-4 file:rounded-lg file:border-0 file:bg-orange-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-orange-800 hover:file:bg-orange-100"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
@@ -140,7 +150,9 @@ export default function AnalyzePage() {
             <p className="font-medium">
               {result.ok
                 ? "Структура соответствует шаблону (заголовки секций и схема данных)."
-                : "Есть замечания по структуре или схеме данных."}
+                : result.payload != null
+                  ? "Есть замечания по сверке с исходным текстом или структуре. Ниже можно доработать JSON по списку замечаний или открыть в редакторе."
+                  : "Есть замечания по структуре или схеме данных (готовый JSON недоступен)."}
             </p>
             <p className="mt-1 text-xs opacity-90">
               Извлечено символов: {result.extractedTextLength}
@@ -149,36 +161,213 @@ export default function AnalyzePage() {
             </p>
           </div>
 
-          {result.ok && result.payload != null && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={importing}
-                className="inline-flex h-10 items-center rounded-xl bg-orange-600 px-5 text-sm font-medium text-white transition hover:bg-orange-700 disabled:opacity-60"
-                onClick={async () => {
-                  setImporting(true);
-                  setError(null);
-                  try {
-                    const r = await fetch("/api/di/import", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      credentials: "include",
-                      body: JSON.stringify({ templateJson: result.payload }),
-                    });
-                    const data = await r.json().catch(() => ({}));
-                    if (!r.ok) {
-                      throw new Error(typeof data?.error === "string" ? data.error : "Ошибка импорта");
+          {result.payload != null && (
+            <div className="space-y-2">
+              {improveHint ? (
+                <p className="text-sm text-emerald-800" role="status">
+                  {improveHint}
+                </p>
+              ) : null}
+              {improveDiff.length > 0 ? (
+                <details className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-sm">
+                  <summary className="cursor-pointer font-medium text-emerald-900">
+                    Что изменилось после доработки ({improveDiff.length})
+                  </summary>
+                  <ul className="mt-2 max-h-80 space-y-3 overflow-y-auto pl-1">
+                    {improveDiff.map((ch, idx) => (
+                      <li key={`${ch.path}-${idx}`} className="border-b border-emerald-100 pb-2 last:border-0">
+                        <p className="font-mono text-xs text-emerald-800">{ch.path}</p>
+                        <p className="mt-1 text-xs text-red-800 line-through decoration-red-600/70">{ch.before}</p>
+                        <p className="mt-0.5 text-xs text-emerald-950">{ch.after}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+              {result.verifyNote ? (
+                <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700">
+                  {result.verifyNote}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={importing}
+                  className="inline-flex h-10 items-center rounded-xl bg-orange-600 px-5 text-sm font-medium text-white transition hover:bg-orange-700 disabled:opacity-60"
+                  onClick={async () => {
+                    setImporting(true);
+                    setError(null);
+                    try {
+                      const r = await fetch("/api/di/import", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ templateJson: result.payload }),
+                      });
+                      const data = await r.json().catch(() => ({}));
+                      if (!r.ok) {
+                        throw new Error(typeof data?.error === "string" ? data.error : "Ошибка импорта");
+                      }
+                      router.push(`/history/${data.id}/edit`);
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : "Ошибка импорта");
+                    } finally {
+                      setImporting(false);
                     }
-                    router.push(`/history/${data.id}/edit`);
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : "Ошибка импорта");
-                  } finally {
-                    setImporting(false);
+                  }}
+                >
+                  {importing ? "Импорт…" : "Открыть в редакторе"}
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    improving ||
+                    importing ||
+                    !(
+                      result.issues.length > 0 ||
+                      (result.compliance?.issues?.length ?? 0) > 0 ||
+                      Boolean(result.compliance?.note?.trim())
+                    )
                   }
-                }}
-              >
-                {importing ? "Импорт…" : "Открыть в редакторе"}
-              </button>
+                  title={
+                    result.issues.length === 0 &&
+                    (result.compliance?.issues?.length ?? 0) === 0 &&
+                    !result.compliance?.note?.trim()
+                      ? "Сначала нужны замечания: включите проверку ЕКС/ЕТКС и дождитесь анализа"
+                      : undefined
+                  }
+                  className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-5 text-sm font-medium text-orange-900 transition hover:bg-orange-50 disabled:opacity-50"
+                  onClick={async () => {
+                    setImproving(true);
+                    setError(null);
+                    setImproveHint(null);
+                    setImproveDiff([]);
+                    const beforeParsed = instructionSchema.parse(
+                      JSON.parse(JSON.stringify(result.payload)),
+                    );
+                    try {
+                      let r: Response;
+                      if (file && file.size > 0) {
+                        const form = new FormData();
+                        form.set("templateJson", JSON.stringify(result.payload));
+                        form.set("analyzeIssues", JSON.stringify(result.issues));
+                        if (result.compliance) {
+                          form.set("compliance", JSON.stringify(result.compliance));
+                        }
+                        form.set("file", file);
+                        r = await fetch("/api/di/improve", {
+                          method: "POST",
+                          body: form,
+                          credentials: "include",
+                        });
+                      } else {
+                        r = await fetch("/api/di/improve", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({
+                            templateJson: result.payload,
+                            analyzeIssues: result.issues,
+                            compliance: result.compliance,
+                          }),
+                        });
+                      }
+                      const data = await r.json().catch(() => ({}));
+                      if (!r.ok) {
+                        throw new Error(typeof data?.error === "string" ? data.error : "Ошибка доработки");
+                      }
+                      const payload = data.payload as AnalyzeResponse["payload"];
+                      const printablePreview = data.printablePreview as string | undefined;
+                      const model = data.model as string | undefined;
+                      setResult((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              ok: true,
+                              payload,
+                              printablePreview: printablePreview ?? prev.printablePreview,
+                              model: model ?? prev.model,
+                              issues: [],
+                              compliance: undefined,
+                              verifyNote:
+                                file && file.size > 0
+                                  ? "Список замечаний очищен. Доработка выполнялась с текстом загруженного Word. Для новой сверки и ЕКС/ЕТКС нажмите «Проверить» в форме выше (тот же файл можно оставить)."
+                                  : "Список замечаний очищен. Файл в форме не был выбран — в доработку не попал исходный текст, замечания сверки могут повториться. Выберите тот же .doc/.docx и снова нажмите «Проверить», затем при необходимости «Доработать».",
+                            }
+                          : prev,
+                      );
+                      const afterParsed = instructionSchema.parse(JSON.parse(JSON.stringify(payload)));
+                      setImproveDiff(listInstructionPayloadChanges(beforeParsed, afterParsed));
+                      setImproveHint(
+                        "Текст инструкции обновлён с учётом замечаний. Смотрите «Что изменилось после доработки»; для повторной проверки нажмите «Проверить» в форме выше или откройте в редакторе.",
+                      );
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : "Ошибка доработки");
+                    } finally {
+                      setImproving(false);
+                    }
+                  }}
+                >
+                  {improving ? "Доработка…" : "Доработать по замечаниям"}
+                </button>
+                <button
+                  type="button"
+                  disabled={importing || improving || exporting}
+                  className="inline-flex h-10 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-5 text-sm font-medium text-emerald-950 transition hover:bg-emerald-100 disabled:opacity-50"
+                  onClick={async () => {
+                    if (result.payload == null) return;
+                    setExporting(true);
+                    setError(null);
+                    try {
+                      const r = await fetch("/api/di/export-draft", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ templateJson: result.payload }),
+                      });
+                      if (!r.ok) {
+                        const data = await r.json().catch(() => null);
+                        const msg =
+                          typeof data?.message === "string"
+                            ? data.message
+                            : typeof data?.error === "string"
+                              ? data.error
+                              : `Ошибка ${r.status}`;
+                        throw new Error(msg);
+                      }
+                      const blob = await r.blob();
+                      let filename = "instrukciya_proverka.docx";
+                      const cd = r.headers.get("Content-Disposition");
+                      const m = cd?.match(/filename\*=UTF-8''([^;\s]+)/);
+                      if (m?.[1]) {
+                        try {
+                          filename = decodeURIComponent(m[1]);
+                        } catch {
+                          filename = m[1];
+                        }
+                      }
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = filename;
+                      a.rel = "noopener";
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : "Не удалось скачать DOCX.");
+                    } finally {
+                      setExporting(false);
+                    }
+                  }}
+                >
+                  {exporting ? "Файл…" : "Скачать .docx"}
+                </button>
+              </div>
+              <p className="text-xs text-zinc-600">
+                «Скачать .docx» формирует файл по шаблону приложения из текущего JSON (не копия загрузки). Кнопка «Доработать» отправляет JSON и замечания в модель. Чтобы исправления совпали с повторной проверкой, оставьте в поле выбора тот же Word — его текст уходит в доработку вместе с JSON. Спорные пункты можно сокращать или заменять; после доработки список замечаний сбрасывается, повторный анализ — кнопка «Проверить» в форме выше. Должность и подразделение не меняются.
+              </p>
             </div>
           )}
 
@@ -224,7 +413,7 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {result.ok && result.printablePreview && (
+          {result.printablePreview && (
             <details className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
               <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
                 Предпросмотр текста по шаблону

@@ -1,8 +1,11 @@
 import { loadEnvConfig } from "@next/env";
 import { getResolvedApiConfig, type ResolvedApiConfig } from "@/lib/api-settings";
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
+import { applyTripleTextQuality } from "@/lib/di-text-quality";
 import {
-  isDirectorRole,
+  capitalizeListItems,
+  ensureResponsibilityItems,
+  FIXED_SUBORDINATION_LINES,
   isLeadershipRole,
   isResponsibilityRelevantLine,
 } from "@/lib/di-rules";
@@ -18,7 +21,6 @@ type GenerationInput = {
 
 const MANDATORY_HIRING_TEXT =
   "Работник назначается на должность и освобождается от должности в установленном порядке действующим трудовым законодательством и приказом генерального директора организации";
-const MANDATORY_DIRECTOR_SUBORDINATION_TEXT = "Генеральному директору";
 const MANDATORY_LINEAR_DUTIES = [
   "Соблюдать правила трудового распорядка, установленного в компании;",
   "Выполнять иные поручения вышестоящего руководства;",
@@ -45,27 +47,6 @@ function cleanGeneratedText(value: string): string {
     .replace(/\s+([,.;:!?])/g, "$1");
 }
 
-function cleanSubordinationLines(lines: string[]): string[] {
-  const removalPatterns: RegExp[] = [
-    // Wrong orientation: "в прямом подчинении находится ..." (means employee has subordinates)
-    /в\s*прямом\s*подчинени[еи]\s*находится/i,
-    /в\s*подчинении\s*находится/i,
-    /в\s*его\s*подчинении/i,
-    // Another wrong orientation: "ему подчиняются/подчинен(а)"
-    /ему\s*подчиня(ют|ются|ется)/i,
-    /ему\s*подчинен(у|а|ы)/i,
-    // Wrong content for "Подчиненность": sometimes LLM puts substitution clause here.
-    /на\s*время\s*отсутствия/i,
-    /функц(ии|ия)\s*на\s*время\s*отсутствия/i,
-    /исполняет\s+назначенн(о(е|ый)|ая|ый|ую|ого|ых)\s+лиц(о|а)/i,
-  ];
-
-  return (lines ?? [])
-    .map((s) => cleanGeneratedText(s))
-    .filter(Boolean)
-    .filter((line) => !removalPatterns.some((re) => re.test(line)));
-}
-
 function fallbackPayload(input: GenerationInput): InstructionPayload {
   const generalItems = input.facts.slice(0, 5);
   const dutiesItems = input.facts.slice(5, 15);
@@ -83,7 +64,7 @@ function fallbackPayload(input: GenerationInput): InstructionPayload {
           generalItems.length > 0
             ? generalItems
             : ["Квалификационные требования определяются работодателем."],
-        subordination: ["Подчиняется непосредственному руководителю подразделения."],
+        subordination: FIXED_SUBORDINATION_LINES,
         hiringProcedure: [MANDATORY_HIRING_TEXT],
         substitutionProcedure: ["На время отсутствия обязанности исполняет назначенное лицо."],
         regulatoryDocuments: ["Руководствуется ТК РФ, отраслевыми нормами и внутренними регламентами."],
@@ -166,6 +147,16 @@ function applyTerminologyRules(payload: InstructionPayload): InstructionPayload 
   p.sections.rights.items = p.sections.rights.items.map(normalizeTerminology);
   p.sections.responsibility.items = p.sections.responsibility.items.map(normalizeTerminology);
   p.signatures.coordinator = normalizeTerminology(p.signatures.coordinator);
+  p.sections.general.requiredQualification = capitalizeListItems(p.sections.general.requiredQualification);
+  p.sections.general.subordination = capitalizeListItems(p.sections.general.subordination);
+  p.sections.general.hiringProcedure = capitalizeListItems(p.sections.general.hiringProcedure);
+  p.sections.general.substitutionProcedure = capitalizeListItems(p.sections.general.substitutionProcedure);
+  p.sections.general.regulatoryDocuments = capitalizeListItems(p.sections.general.regulatoryDocuments);
+  p.sections.general.localRegulations = capitalizeListItems(p.sections.general.localRegulations);
+  p.sections.general.employeeMustKnow = capitalizeListItems(p.sections.general.employeeMustKnow);
+  p.sections.duties.items = capitalizeListItems(p.sections.duties.items);
+  p.sections.rights.items = capitalizeListItems(p.sections.rights.items);
+  p.sections.responsibility.items = capitalizeListItems(p.sections.responsibility.items);
   return p;
 }
 
@@ -219,18 +210,8 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
     pool,
     "Квалификационные требования определяются работодателем",
   );
-  // Ensure "Подчиненность" doesn't accidentally include "employee has subordinates" statements.
-  safe.sections.general.subordination = cleanSubordinationLines(safe.sections.general.subordination);
-  safe.sections.general.subordination = padList(
-    safe.sections.general.subordination,
-    1,
-    pool,
-    "Подчиняется непосредственному руководителю подразделения",
-  );
-  // Безусловное бизнес-правило: если должность директора, подчинение только генеральному директору.
-  if (isDirectorRole(input.jobTitle)) {
-    safe.sections.general.subordination = [MANDATORY_DIRECTOR_SUBORDINATION_TEXT];
-  }
+  // Безусловное бизнес-правило: "Подчиненность" всегда фиксирована и не зависит от должности.
+  safe.sections.general.subordination = FIXED_SUBORDINATION_LINES;
   safe.sections.general.hiringProcedure = padList(
     safe.sections.general.hiringProcedure,
     1,
@@ -275,17 +256,11 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
     pool,
     "Иметь право на условия и ресурсы, необходимые для безопасной работы",
   );
-  // Для раздела "Ответственность" не задаем искусственный минимум:
-  // оставляем только релевантные пункты и гарантируем хотя бы 1 строку для валидности схемы.
   safe.sections.responsibility.items = safe.sections.responsibility.items
     .filter((line) => isResponsibilityRelevantLine(line))
     .map((line) => cleanGeneratedText(line))
     .filter(Boolean);
-  if (safe.sections.responsibility.items.length === 0) {
-    safe.sections.responsibility.items = [
-      "Нести ответственность за качество, сроки и безопасность выполнения работ",
-    ];
-  }
+  safe.sections.responsibility.items = ensureResponsibilityItems(safe.sections.responsibility.items, 14);
 
   // Бизнес-правило: для руководящих должностей всегда включаем 5S/стандартизацию.
   if (isLeadershipRole(input.jobTitle)) {
@@ -320,7 +295,12 @@ export async function generateInstructionPayload(
     resolved ?? (await getResolvedApiConfig());
   const apiKey = apiKeyRaw?.trim() || undefined;
   if (!apiKey) {
-    return { payload: ensureSectionItems(fallbackPayload(input), input), model };
+    const local = ensureSectionItems(fallbackPayload(input), input);
+    const refined = await applyTripleTextQuality(local, {
+      resolvedApi: resolved ?? (await getResolvedApiConfig()),
+      skipLlmProofread: true,
+    });
+    return { payload: refined, model };
   }
 
   const prompt = `Сформируй JSON строго по схеме должностной инструкции с неизменными заголовками секций.
@@ -358,7 +338,8 @@ export async function generateInstructionPayload(
 - localRegulations: 6
 - employeeMustKnow: 14
 - duties.items: 32
-- rights.items: 22`;
+- rights.items: 22
+- responsibility.items: 14`;
 
   let response: Response;
   try {
@@ -377,12 +358,19 @@ export async function generateInstructionPayload(
   } catch (e) {
     // Сетевые ошибки/таймауты OpenRouter не должны ломать генерацию DI.
     console.warn("OpenRouter request failed, fallback to local generation", e);
-    return { payload: ensureSectionItems(fallbackPayload(input), input), model };
+    const fb = ensureSectionItems(fallbackPayload(input), input);
+    const refinedFb = await applyTripleTextQuality(fb, {
+      resolvedApi: resolved ?? (await getResolvedApiConfig()),
+      skipLlmProofread: true,
+    });
+    return { payload: refinedFb, model };
   }
 
   if (!response.ok) {
     console.warn("OpenRouter API error, fallback to local generation", response.status);
-    return { payload: ensureSectionItems(fallbackPayload(input), input), model };
+    const fb = ensureSectionItems(fallbackPayload(input), input);
+    const refinedFb = await applyTripleTextQuality(fb, { resolvedApi: resolved ?? (await getResolvedApiConfig()) });
+    return { payload: refinedFb, model };
   }
 
   const data = await response.json();
@@ -392,7 +380,11 @@ export async function generateInstructionPayload(
   try {
     payload = JSON.parse(jsonText) as InstructionPayload;
   } catch {
-    return { payload: ensureSectionItems(fallbackPayload(input), input), model };
+    const fb = ensureSectionItems(fallbackPayload(input), input);
+    const refinedFb = await applyTripleTextQuality(fb, { resolvedApi: resolved ?? (await getResolvedApiConfig()) });
+    return { payload: refinedFb, model };
   }
-  return { payload: ensureSectionItems(payload, input), model };
+  const ensured = ensureSectionItems(payload, input);
+  const refined = await applyTripleTextQuality(ensured, { resolvedApi: resolved ?? (await getResolvedApiConfig()) });
+  return { payload: refined, model };
 }

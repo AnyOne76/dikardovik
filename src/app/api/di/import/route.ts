@@ -1,7 +1,10 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { getResolvedApiConfig } from "@/lib/api-settings";
 import { assertStrictStructure, instructionSchema, toPrintableText } from "@/lib/di-contract";
+import { applyTripleTextQuality } from "@/lib/di-text-quality";
+import { FIXED_SUBORDINATION_LINES } from "@/lib/di-rules";
 import { normalizeJobTitle } from "@/lib/normalize";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -32,6 +35,11 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid DI payload" }, { status: 400 });
   }
+
+  payload.sections.general.subordination = FIXED_SUBORDINATION_LINES;
+
+  payload = await applyTripleTextQuality(payload, { resolvedApi: await getResolvedApiConfig() });
+  assertStrictStructure(payload);
 
   const positionName = payload.templateMeta.positionName.trim();
   const normalized = normalizeJobTitle(positionName);

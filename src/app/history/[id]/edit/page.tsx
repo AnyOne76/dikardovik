@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { InstructionPayload } from "@/lib/di-contract";
-import { getFinalNoteLines } from "@/lib/di-rules";
+import { FIXED_SUBORDINATION_LINES, getFinalNoteLines } from "@/lib/di-rules";
 
 function NumberedList({ items }: { items: string[] }) {
   return (
@@ -59,6 +59,7 @@ export default function EditHistoryPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +89,13 @@ export default function EditHistoryPage() {
         if (!mounted) return;
         setBaseId(data.id);
         setVersion(data.version);
-        setPayload(data.templateJson);
+        setPayload({
+          ...data.templateJson,
+          sections: {
+            ...data.templateJson.sections,
+            general: { ...data.templateJson.sections.general, subordination: FIXED_SUBORDINATION_LINES },
+          },
+        });
       } catch (e) {
         if (!mounted) return;
         setError(e instanceof Error ? e.message : "Ошибка загрузки");
@@ -107,11 +114,18 @@ export default function EditHistoryPage() {
     setSaving(true);
     setError(null);
     try {
+      const payloadToSave: InstructionPayload = {
+        ...payload,
+        sections: {
+          ...payload.sections,
+          general: { ...payload.sections.general, subordination: FIXED_SUBORDINATION_LINES },
+        },
+      };
       const r = await fetch(`/api/di/history/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ templateJson: payload }),
+        body: JSON.stringify({ templateJson: payloadToSave }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Ошибка сохранения");
@@ -122,6 +136,48 @@ export default function EditHistoryPage() {
       setError(e instanceof Error ? e.message : "Ошибка сохранения");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function exportDocx() {
+    const exportId = savedId ?? baseId;
+    if (!exportId) {
+      setError("Сначала дождитесь загрузки документа.");
+      return;
+    }
+
+    setExporting(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/di/export/${exportId}`, { credentials: "include" });
+      if (!r.ok) {
+        const contentType = r.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(
+            typeof data.message === "string"
+              ? data.message
+              : typeof data.error === "string"
+                ? data.error
+                : `Ошибка экспорта ${r.status}`,
+          );
+        }
+        throw new Error(`Ошибка экспорта ${r.status}`);
+      }
+
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${payload?.templateMeta.positionName ?? "instruction"}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка экспорта");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -171,12 +227,14 @@ export default function EditHistoryPage() {
             >
               Назад
             </button>
-            <a
-              href={exportHref}
-              className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-100"
+            <button
+              type="button"
+              disabled={exporting || exportHref === "#"}
+              onClick={exportDocx}
+              className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Экспорт DOCX
-            </a>
+              {exporting ? "Экспорт..." : "Экспорт DOCX"}
+            </button>
           </div>
         </div>
       </section>
@@ -258,17 +316,10 @@ export default function EditHistoryPage() {
                 },
                 {
                   label: "Подчиненность (только кому подчиняется)",
-                  value: payload.sections.general.subordination,
+                  value: FIXED_SUBORDINATION_LINES,
                   section: "subordination",
-                  onChange: (next: string[]) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            sections: { ...p.sections, general: { ...p.sections.general, subordination: next } },
-                          }
-                        : p,
-                    ),
+                  fixed: true,
+                  onChange: () => undefined,
                 },
                 {
                   label: "Прием на работу",
@@ -362,18 +413,25 @@ export default function EditHistoryPage() {
                   <label className="block text-sm font-medium text-zinc-700">{block.label}</label>
                   <button
                     type="button"
-                    disabled={saving || regenerating === block.section}
+                    disabled={saving || regenerating === block.section || ("fixed" in block && block.fixed)}
                     onClick={() => regenerate(block.section)}
                     className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:opacity-50"
                   >
-                    {regenerating === block.section ? "Перегенерируем..." : "Перегенерировать"}
+                    {"fixed" in block && block.fixed
+                      ? "Зафиксировано"
+                      : regenerating === block.section
+                        ? "Перегенерируем..."
+                        : "Перегенерировать"}
                   </button>
                 </div>
                 <textarea
                   rows={4}
                   value={itemsToText(block.value)}
+                  readOnly={"fixed" in block && block.fixed}
                   onChange={(e) => block.onChange(textToItems(e.target.value))}
-                  className="w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
+                  className={`w-full resize-y rounded-xl border border-zinc-200 px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none ${
+                    "fixed" in block && block.fixed ? "bg-zinc-50 text-zinc-600" : "bg-white"
+                  }`}
                 />
               </div>
             ))}
