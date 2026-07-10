@@ -10,6 +10,7 @@ import {
 } from "@/lib/di-contract";
 import { patchEmptyInstructionLists } from "@/lib/di-rules";
 import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
+import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
 
 loadEnvConfig(process.cwd());
 
@@ -166,7 +167,7 @@ ${jsonSlice}
 
   let response: Response;
   try {
-    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    response = await fetch(KIE_CLAUDE_URL, {
       method: "POST",
       signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
       headers: {
@@ -174,11 +175,7 @@ ${jsonSlice}
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        model: verifyModel,
-        temperature: 0,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      body: buildKieClaudeBody({ model: verifyModel, prompt, temperature: 0, maxTokens: 4096 }),
     });
   } catch (e) {
     return {
@@ -208,16 +205,16 @@ ${jsonSlice}
   }
 
   const rawBody = await response.text().catch(() => "");
-  let verifyChatData: { choices?: { message?: { content?: string } }[] };
+  let verifyChatData: unknown;
   try {
-    verifyChatData = JSON.parse(rawBody) as typeof verifyChatData;
+    verifyChatData = JSON.parse(rawBody);
   } catch {
     const trimmed = rawBody.trim();
     const hint = trimmed ? trimmed.slice(0, 220).replace(/\s+/g, " ") : "";
     const looksHtml = /^<!doctype|^<html[\s>]/i.test(trimmed);
     const tail = trimmed.length > 220 ? "…" : "";
     const extra = !hint
-      ? "Пустой ответ — проверьте OPENROUTER_API_KEY, сеть и лимиты провайдера."
+      ? "Пустой ответ — проверьте KIE API-ключ, сеть и лимиты провайдера."
       : looksHtml
         ? "Пришёл HTML вместо JSON (часто прокси, VPN или блокировка). "
         : "";
@@ -232,7 +229,7 @@ ${jsonSlice}
       skipped: true,
     };
   }
-  const content = verifyChatData?.choices?.[0]?.message?.content || "";
+  const content = extractClaudeText(verifyChatData);
   let parsed: unknown;
   try {
     parsed = parseJsonFromLlmContent(content);
@@ -355,17 +352,14 @@ ${text}
 
   let response: Response;
   try {
-    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    response = await fetch(KIE_CLAUDE_URL, {
       method: "POST",
       signal: AbortSignal.timeout(ANALYZE_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      body: buildKieClaudeBody({ model, prompt, maxTokens: 8192 }),
     });
   } catch (e) {
     return {
@@ -396,9 +390,9 @@ ${text}
     };
   }
 
-  let analyzeChatData: { choices?: { message?: { content?: string } }[] };
+  let analyzeChatData: unknown;
   try {
-    analyzeChatData = (await response.json()) as typeof analyzeChatData;
+    analyzeChatData = await response.json();
   } catch (e) {
     return {
       ok: false,
@@ -413,7 +407,7 @@ ${text}
       truncated,
     };
   }
-  const content = analyzeChatData?.choices?.[0]?.message?.content || "";
+  const content = extractClaudeText(analyzeChatData);
   let parsed: unknown;
   try {
     parsed = parseJsonFromLlmContent(content);
@@ -578,18 +572,14 @@ ${JSON.stringify(payload).slice(0, 60_000)}
 
   let resp: Response;
   try {
-    resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    resp = await fetch(KIE_CLAUDE_URL, {
       method: "POST",
       signal: AbortSignal.timeout(COMPLIANCE_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-      }),
+      body: buildKieClaudeBody({ model, prompt, temperature: 0.1, maxTokens: 4096 }),
     });
   } catch (e) {
     return {
@@ -616,9 +606,9 @@ ${JSON.stringify(payload).slice(0, 60_000)}
     };
   }
 
-  let data: { choices?: { message?: { content?: string } }[] };
+  let data: unknown;
   try {
-    data = (await resp.json()) as typeof data;
+    data = await resp.json();
   } catch (e) {
     return {
       ok: false,
@@ -632,7 +622,7 @@ ${JSON.stringify(payload).slice(0, 60_000)}
       ],
     };
   }
-  const content = data?.choices?.[0]?.message?.content ?? "";
+  const content = extractClaudeText(data);
   let parsed: unknown;
   try {
     parsed = parseJsonObjectFromText(content);

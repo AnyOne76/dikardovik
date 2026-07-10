@@ -17,6 +17,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-meta";
 import { getResolvedApiConfig } from "@/lib/api-settings";
 import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
+import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
 
 loadEnvConfig(process.cwd());
 
@@ -106,24 +107,20 @@ async function openrouterGenerateItems(opts: {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const resp = await fetch(KIE_CLAUDE_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.2,
-      }),
+      body: buildKieClaudeBody({ model, prompt, temperature: 0.2, maxTokens: 4096 }),
     });
 
-    if (!resp.ok) throw new Error(`OpenRouter API error ${resp.status}`);
+    if (!resp.ok) throw new Error(`Kie Claude API error ${resp.status}`);
 
     const data = await resp.json();
-    const content = data?.choices?.[0]?.message?.content || "";
+    const content = extractClaudeText(data);
     const jsonText = String(content).replace(/^```(json)?/i, "").replace(/```$/i, "").trim();
     const parsed = JSON.parse(jsonText) as { items?: unknown };
     const items = Array.isArray(parsed.items) ? parsed.items.map((x) => String(x)) : [];
@@ -202,7 +199,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const apiConfig = await getResolvedApiConfig();
   const apiKey = apiConfig.openrouterApiKey.trim();
   const model = apiConfig.openrouterModel;
-  if (!apiKey) return NextResponse.json({ error: "OpenRouter API key missing" }, { status: 500 });
+  if (!apiKey) return NextResponse.json({ error: "KIE API key missing" }, { status: 500 });
 
   let payload: InstructionPayload;
   try {

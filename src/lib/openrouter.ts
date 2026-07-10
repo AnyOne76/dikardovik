@@ -2,6 +2,7 @@ import { loadEnvConfig } from "@next/env";
 import { getResolvedApiConfig, type ResolvedApiConfig } from "@/lib/api-settings";
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
+import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
 import {
   capitalizeListItems,
   ensureResponsibilityItems,
@@ -343,17 +344,14 @@ export async function generateInstructionPayload(
 
   let response: Response;
   try {
-    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    response = await fetch(KIE_CLAUDE_URL, {
       method: "POST",
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(60000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      body: buildKieClaudeBody({ model, prompt, maxTokens: 8192 }),
     });
   } catch (e) {
     // Сетевые ошибки/таймауты OpenRouter не должны ломать генерацию DI.
@@ -374,7 +372,7 @@ export async function generateInstructionPayload(
   }
 
   const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content || "";
+  const content = extractClaudeText(data);
   const jsonText = content.replace(/^```json|```$/g, "").trim();
   let payload: InstructionPayload;
   try {

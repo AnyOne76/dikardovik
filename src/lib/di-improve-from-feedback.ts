@@ -2,6 +2,7 @@ import type { ResolvedApiConfig } from "@/lib/api-settings";
 import { assertStrictStructure, instructionSchema, toPrintableText, type InstructionPayload } from "@/lib/di-contract";
 import { patchEmptyInstructionLists } from "@/lib/di-rules";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
+import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
 
 export type AnalyzeIssueLike = { code?: string; message: string; path?: string };
 export type ComplianceIssueLike = { section: string; severity: string; message: string };
@@ -116,7 +117,7 @@ export async function improveInstructionFromAnalyzeFeedback(
 ): Promise<{ payload: InstructionPayload; model: string; printablePreview: string }> {
   const apiKey = resolved.openrouterApiKey.trim();
   if (!apiKey) {
-    throw new Error("Ключ OpenRouter не настроен.");
+    throw new Error("Ключ KIE не настроен.");
   }
   if (!feedbackBrief.trim()) {
     throw new Error("Нет текста замечаний для доработки.");
@@ -165,32 +166,28 @@ ${feedbackBrief}
 Входной JSON:
 ${rawJson}`;
 
-  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const resp = await fetch(KIE_CLAUDE_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     signal: AbortSignal.timeout(120_000),
-    body: JSON.stringify({
-      model,
-      temperature: 0.15,
-      messages: [{ role: "user", content: prompt }],
-    }),
+    body: buildKieClaudeBody({ model, prompt, temperature: 0.15, maxTokens: 8192 }),
   });
 
   if (!resp.ok) {
     const t = await resp.text().catch(() => "");
-    throw new Error(`OpenRouter: ${resp.status} ${t.slice(0, 200)}`);
+    throw new Error(`Kie Claude API: ${resp.status} ${t.slice(0, 200)}`);
   }
 
-  let data: { choices?: { message?: { content?: string } }[] };
+  let data: unknown;
   try {
-    data = (await resp.json()) as typeof data;
+    data = await resp.json();
   } catch {
-    throw new Error("Ответ OpenRouter не JSON. Попробуйте ещё раз.");
+    throw new Error("Ответ Kie Claude API не JSON. Попробуйте ещё раз.");
   }
-  const content = String(data?.choices?.[0]?.message?.content ?? "");
+  const content = extractClaudeText(data);
   const jsonText = content.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
 
   let parsed: unknown;

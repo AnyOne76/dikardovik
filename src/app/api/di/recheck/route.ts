@@ -120,7 +120,7 @@ async function runRecheck(
 
   if (fileBuffer && fileName) {
     if (!apiKey) {
-      verifyNote = "Нет ключа OpenRouter — сверка с документом недоступна.";
+      verifyNote = "Нет ключа KIE — сверка с документом недоступна.";
     } else {
       try {
         const documentText = await extractInstructionFileText(fileBuffer, fileName);
