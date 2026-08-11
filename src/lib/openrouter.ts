@@ -2,7 +2,7 @@ import { loadEnvConfig } from "@next/env";
 import { getResolvedApiConfig, type ResolvedApiConfig } from "@/lib/api-settings";
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
-import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
+import { DEEPSEEK_CHAT_URL, buildDeepseekBody, extractDeepseekText } from "@/lib/deepseek";
 import {
   capitalizeListItems,
   ensureResponsibilityItems,
@@ -16,6 +16,7 @@ loadEnvConfig(process.cwd());
 type GenerationInput = {
   jobTitle: string;
   department: string;
+  legalEntityId: string;
   facts: string[];
   relatedContext: string[];
 };
@@ -57,6 +58,7 @@ function fallbackPayload(input: GenerationInput): InstructionPayload {
       approvedBy: "Генеральный директор __________________",
       positionName: input.jobTitle,
       departmentName: input.department,
+      legalEntityId: input.legalEntityId,
     },
     sections: {
       general: {
@@ -165,6 +167,7 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
   const fallback = fallbackPayload({
     jobTitle: payload?.templateMeta?.positionName ?? input.jobTitle,
     department: payload?.templateMeta?.departmentName ?? input.department,
+    legalEntityId: input.legalEntityId,
     facts: input.facts,
     relatedContext: input.relatedContext,
   });
@@ -172,6 +175,8 @@ function ensureSectionItems(payload: InstructionPayload, input: GenerationInput)
   const pool = buildPool(input);
 
   if (!safe.templateMeta) safe.templateMeta = fallback.templateMeta;
+  // Юрлицо задаётся пользователем на форме, а не моделью — не доверяем тому, что вернул LLM.
+  safe.templateMeta.legalEntityId = input.legalEntityId;
   if (!safe.sections) safe.sections = fallback.sections;
   if (!safe.sections.general) safe.sections.general = fallback.sections.general;
   if (!safe.sections.duties) safe.sections.duties = fallback.sections.duties;
@@ -344,14 +349,14 @@ export async function generateInstructionPayload(
 
   let response: Response;
   try {
-    response = await fetch(KIE_CLAUDE_URL, {
+    response = await fetch(DEEPSEEK_CHAT_URL, {
       method: "POST",
       signal: AbortSignal.timeout(60000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: buildKieClaudeBody({ model, prompt, maxTokens: 8192 }),
+      body: buildDeepseekBody({ model, prompt, maxTokens: 8192 }),
     });
   } catch (e) {
     // Сетевые ошибки/таймауты OpenRouter не должны ломать генерацию DI.
@@ -372,7 +377,7 @@ export async function generateInstructionPayload(
   }
 
   const data = await response.json();
-  const content = extractClaudeText(data);
+  const content = extractDeepseekText(data);
   const jsonText = content.replace(/^```json|```$/g, "").trim();
   let payload: InstructionPayload;
   try {

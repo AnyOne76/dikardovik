@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FIXED_SUBORDINATION_LINES, getFinalNoteLines } from "@/lib/di-rules";
+import { DEFAULT_LEGAL_ENTITY_ID } from "@/lib/legal-entities";
 
 export const fixedHeaders = {
   approve: "У Т В Е Р Ж Д А Ю",
@@ -31,6 +32,8 @@ export const instructionSchema = z.object({
     approvedBy: z.string().min(1),
     positionName: z.string().min(1),
     departmentName: z.string().min(1),
+    // Юрлицо, по которому формируется ДИ. Отсутствует в старых записях — тогда это МПЗ (эталон).
+    legalEntityId: z.string().default(DEFAULT_LEGAL_ENTITY_ID),
   }),
   sections: z.object({
     general: generalSectionSchema,

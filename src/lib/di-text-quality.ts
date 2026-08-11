@@ -11,7 +11,7 @@ import {
   SCHEMA_SCALAR_FALLBACKS,
 } from "@/lib/di-rules";
 import type { ResolvedApiConfig } from "@/lib/api-settings";
-import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
+import { DEEPSEEK_CHAT_URL, buildDeepseekBody, extractDeepseekText } from "@/lib/deepseek";
 
 const SPELLER_URL = "https://speller.yandex.net/services/spellservice.json/checkTexts";
 const MAX_SPELL_CHUNK = 9_500;
@@ -222,18 +222,18 @@ ${JSON.stringify(slice)}
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 90_000);
   try {
-    const resp = await fetch(KIE_CLAUDE_URL, {
+    const resp = await fetch(DEEPSEEK_CHAT_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       signal: controller.signal,
-      body: buildKieClaudeBody({ model: resolved.openrouterModel, prompt, temperature: 0.1, maxTokens: 8192 }),
+      body: buildDeepseekBody({ model: resolved.openrouterModel, prompt, temperature: 0.1, maxTokens: 8192 }),
     });
     if (!resp.ok) return null;
     const data = await resp.json();
-    const content = extractClaudeText(data);
+    const content = extractDeepseekText(data);
     const jsonText = content.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
     const parsed = JSON.parse(jsonText) as ProofShape;
     if (!parsed?.templateMeta || !parsed.sections) return null;

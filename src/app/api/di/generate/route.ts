@@ -9,6 +9,7 @@ import { normalizeJobTitle } from "@/lib/normalize";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-meta";
+import { DEFAULT_LEGAL_ENTITY_ID, getLegalEntity, isLegalEntityId } from "@/lib/legal-entities";
 
 function toErrorDetails(error: unknown): string {
   if (error instanceof Error) {
@@ -30,7 +31,9 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const jobTitle = String(body.jobTitle || "").trim();
-  const department = String(body.department || "Служба строительства и эксплуатации").trim();
+  const legalEntityId = isLegalEntityId(body.legalEntity) ? body.legalEntity : DEFAULT_LEGAL_ENTITY_ID;
+  const legalEntity = getLegalEntity(legalEntityId);
+  const department = String(body.department || legalEntity.departments[0]).trim();
   if (!jobTitle) {
     return NextResponse.json({ error: "jobTitle is required" }, { status: 400 });
   }
@@ -65,6 +68,7 @@ export async function POST(request: Request) {
       {
         jobTitle,
         department,
+        legalEntityId,
         facts: perplexity.snippets.slice(0, 90),
         relatedContext: related.flatMap((r) => r.versions.map((v) => v.finalText.slice(0, 400))),
       },

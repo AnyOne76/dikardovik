@@ -2,28 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getFinalNoteLines } from "@/lib/di-rules";
-
-const DEPARTMENTS = [
-  "Административно-хозяйственная служба",
-  "Департамент ритейла и франчайзинга",
-  "Коммерческая служба",
-  "Производственная служба",
-  "Служба безопасности",
-  "Служба главного инженера",
-  "Служба интернет коммерции",
-  "Служба информационных технологий",
-  "Служба качества",
-  "Служба контроля и ревизий",
-  "Служба маркетинга и рекламы",
-  "Служба персонала",
-  "Служба по исследованию и разработке продукта",
-  "Служба по охране труда и пожарной безопасности",
-  "Служба по управлению цепями поставок",
-  "Служба повышения производительности труда и эффективности",
-  "Служба строительства и эксплуатации",
-  "Финансово-Экономическая служба",
-  "Юридическая служба",
-];
+import { DEFAULT_LEGAL_ENTITY_ID, LEGAL_ENTITIES, getLegalEntity } from "@/lib/legal-entities";
 
 type GenerateResponse = {
   id: string;
@@ -33,6 +12,7 @@ type GenerateResponse = {
     templateMeta: {
       positionName: string;
       departmentName: string;
+      legalEntityId?: string;
     };
     sections: {
       general: {
@@ -75,7 +55,9 @@ function LabelRow({ label, items }: { label: string; items: string[] }) {
 
 export default function HomePage() {
   const [jobTitle, setJobTitle] = useState("");
-  const [department, setDepartment] = useState("Служба строительства и эксплуатации");
+  const [legalEntityId, setLegalEntityId] = useState(DEFAULT_LEGAL_ENTITY_ID);
+  const entity = getLegalEntity(legalEntityId);
+  const [department, setDepartment] = useState(entity.departments[0]);
   const [customDepartment, setCustomDepartment] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerateResponse | null>(null);
@@ -90,6 +72,13 @@ export default function HomePage() {
   const selectedDepartment =
     department === "__custom__" ? customDepartment.trim() : department;
 
+  function handleLegalEntityChange(nextId: string) {
+    const nextEntity = getLegalEntity(nextId);
+    setLegalEntityId(nextEntity.id);
+    setDepartment(nextEntity.departments[0]);
+    setCustomDepartment("");
+  }
+
   async function generate() {
     setError("");
     setLoading(true);
@@ -97,7 +86,7 @@ export default function HomePage() {
       const resp = await fetch("/api/di/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobTitle, department: selectedDepartment }),
+        body: JSON.stringify({ jobTitle, department: selectedDepartment, legalEntity: legalEntityId }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Ошибка генерации");
@@ -141,12 +130,26 @@ export default function HomePage() {
           value={jobTitle}
           onChange={(e) => setJobTitle(e.target.value)}
         />
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">Юридическое лицо</label>
+          <select
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
+            value={legalEntityId}
+            onChange={(e) => handleLegalEntityChange(e.target.value)}
+          >
+            {LEGAL_ENTITIES.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <select
           className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
         >
-          {DEPARTMENTS.map((item) => (
+          {entity.departments.map((item) => (
             <option key={item} value={item}>
               {item}
             </option>
@@ -197,6 +200,14 @@ export default function HomePage() {
                 <tr>
                   <td className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-3 text-center text-base font-bold tracking-[0.3em] text-zinc-800" colSpan={2}>
                     ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
+                  </td>
+                </tr>
+                <tr className="align-top">
+                  <td className="w-[34%] border border-orange-100 bg-orange-50/70 p-3 font-medium">
+                    Юридическое лицо
+                  </td>
+                  <td className="border border-orange-100 p-3">
+                    {getLegalEntity(result.payload.templateMeta.legalEntityId).label}
                   </td>
                 </tr>
                 <tr className="align-top">

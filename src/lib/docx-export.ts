@@ -18,6 +18,7 @@ import {
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
 import { getResolvedApiConfig } from "@/lib/api-settings";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
+import { getLegalEntity, type LegalEntity } from "@/lib/legal-entities";
 import {
   capitalizeListItems,
   ensureResponsibilityItems,
@@ -220,8 +221,48 @@ function sectionRow(title: string) {
   });
 }
 
-function brandHeader(logoData: Buffer | null) {
+function brandHeader(logoData: Buffer | null, entity: LegalEntity) {
   const lineBorder = { style: BorderStyle.SINGLE, size: 8, color: "9B6A6A" };
+
+  // Юрлица без знака "Мясницкий ряд" (например Бискар, ИТ Эксперт): без картинки-логотипа
+  // и без "Мясницкий"/"Ряд" — только название своей организации на всю ширину шапки.
+  if (!entity.showBrandMark) {
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: NO_BORDER,
+        bottom: NO_BORDER,
+        left: NO_BORDER,
+        right: NO_BORDER,
+        insideHorizontal: NO_BORDER,
+        insideVertical: NO_BORDER,
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              margins: { top: 0, bottom: 60, left: 0, right: 0 },
+              borders: {
+                top: NO_BORDER,
+                left: NO_BORDER,
+                right: NO_BORDER,
+                bottom: lineBorder,
+              },
+              children: [
+                para(entity.companyName, {
+                  alignment: AlignmentType.CENTER,
+                  color: "808080",
+                  size: 28,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
   const logoChildren = logoData
     ? [
         new Paragraph({
@@ -285,7 +326,7 @@ function brandHeader(logoData: Buffer | null) {
               bottom: lineBorder,
             },
             children: [
-              para("ООО «МПЗ Мясницкий ряд», г. Одинцово. Московская область", {
+              para(entity.companyName, {
                 alignment: AlignmentType.CENTER,
                 color: "808080",
                 size: 28,
@@ -348,7 +389,8 @@ function acknowledgementBlock() {
 export async function exportInstructionToDocx(payload: InstructionPayload): Promise<Buffer> {
   const resolved = await getResolvedApiConfig();
   const safePayload = await applyTripleTextQuality(payload, { resolvedApi: resolved });
-  const logoData = await readFile(LOGO_PATH).catch(() => null);
+  const entity = getLegalEntity(safePayload.templateMeta.legalEntityId);
+  const logoData = entity.showBrandMark ? await readFile(LOGO_PATH).catch(() => null) : null;
   const doc = new Document({
     sections: [
       {
@@ -364,13 +406,13 @@ export async function exportInstructionToDocx(payload: InstructionPayload): Prom
         },
         headers: {
           default: new Header({
-            children: [brandHeader(logoData)],
+            children: [brandHeader(logoData, entity)],
           }),
         },
         children: [
           para(fixedHeaders.approve, { alignment: AlignmentType.RIGHT, after: 160 }),
           para("Генеральный директор", { alignment: AlignmentType.RIGHT, after: 160 }),
-          para("___________ Филиппов Д.С.", { alignment: AlignmentType.RIGHT, after: 160 }),
+          para(`___________ ${entity.directorName}`, { alignment: AlignmentType.RIGHT, after: 160 }),
           para("«____» ___________________ 20__г.", { alignment: AlignmentType.RIGHT, after: 280 }),
           para(fixedHeaders.title, { bold: true, alignment: AlignmentType.CENTER, size: 28, after: 160 }),
           new Table({

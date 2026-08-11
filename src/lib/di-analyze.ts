@@ -10,7 +10,7 @@ import {
 } from "@/lib/di-contract";
 import { patchEmptyInstructionLists } from "@/lib/di-rules";
 import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
-import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
+import { DEEPSEEK_CHAT_URL, buildDeepseekBody, extractDeepseekText } from "@/lib/deepseek";
 
 loadEnvConfig(process.cwd());
 
@@ -167,7 +167,7 @@ ${jsonSlice}
 
   let response: Response;
   try {
-    response = await fetch(KIE_CLAUDE_URL, {
+    response = await fetch(DEEPSEEK_CHAT_URL, {
       method: "POST",
       signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
       headers: {
@@ -175,7 +175,7 @@ ${jsonSlice}
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: buildKieClaudeBody({ model: verifyModel, prompt, temperature: 0, maxTokens: 4096 }),
+      body: buildDeepseekBody({ model: verifyModel, prompt, temperature: 0, maxTokens: 4096 }),
     });
   } catch (e) {
     return {
@@ -214,7 +214,7 @@ ${jsonSlice}
     const looksHtml = /^<!doctype|^<html[\s>]/i.test(trimmed);
     const tail = trimmed.length > 220 ? "…" : "";
     const extra = !hint
-      ? "Пустой ответ — проверьте KIE API-ключ, сеть и лимиты провайдера."
+      ? "Пустой ответ — проверьте DeepSeek API-ключ, сеть и лимиты провайдера."
       : looksHtml
         ? "Пришёл HTML вместо JSON (часто прокси, VPN или блокировка). "
         : "";
@@ -229,7 +229,7 @@ ${jsonSlice}
       skipped: true,
     };
   }
-  const content = extractClaudeText(verifyChatData);
+  const content = extractDeepseekText(verifyChatData);
   let parsed: unknown;
   try {
     parsed = parseJsonFromLlmContent(content);
@@ -352,14 +352,14 @@ ${text}
 
   let response: Response;
   try {
-    response = await fetch(KIE_CLAUDE_URL, {
+    response = await fetch(DEEPSEEK_CHAT_URL, {
       method: "POST",
       signal: AbortSignal.timeout(ANALYZE_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: buildKieClaudeBody({ model, prompt, maxTokens: 8192 }),
+      body: buildDeepseekBody({ model, prompt, maxTokens: 8192 }),
     });
   } catch (e) {
     return {
@@ -407,7 +407,7 @@ ${text}
       truncated,
     };
   }
-  const content = extractClaudeText(analyzeChatData);
+  const content = extractDeepseekText(analyzeChatData);
   let parsed: unknown;
   try {
     parsed = parseJsonFromLlmContent(content);
@@ -572,14 +572,14 @@ ${JSON.stringify(payload).slice(0, 60_000)}
 
   let resp: Response;
   try {
-    resp = await fetch(KIE_CLAUDE_URL, {
+    resp = await fetch(DEEPSEEK_CHAT_URL, {
       method: "POST",
       signal: AbortSignal.timeout(COMPLIANCE_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: buildKieClaudeBody({ model, prompt, temperature: 0.1, maxTokens: 4096 }),
+      body: buildDeepseekBody({ model, prompt, temperature: 0.1, maxTokens: 4096 }),
     });
   } catch (e) {
     return {
@@ -622,7 +622,7 @@ ${JSON.stringify(payload).slice(0, 60_000)}
       ],
     };
   }
-  const content = extractClaudeText(data);
+  const content = extractDeepseekText(data);
   let parsed: unknown;
   try {
     parsed = parseJsonObjectFromText(content);

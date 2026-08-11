@@ -94,7 +94,7 @@ export default function AdminSettingsPage() {
     <main className="mx-auto max-w-2xl p-6 text-zinc-900">
       <h1 className="text-2xl font-semibold text-orange-700">Настройки API</h1>
       <p className="mt-1 text-sm text-zinc-600">
-        Ключи Perplexity и KIE (Claude) хранятся в базе. Пустое поле ключа при сохранении не меняет уже сохранённый
+        Ключи Perplexity и DeepSeek хранятся в базе. Пустое поле ключа при сохранении не меняет уже сохранённый
         ключ. Если ключ не задан в базе, используются переменные окружения.
       </p>
 
@@ -142,7 +142,10 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-            <h2 className="text-lg font-semibold text-orange-700">KIE (Claude)</h2>
+            <h2 className="text-lg font-semibold text-orange-700">DeepSeek</h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Ключ с сайта api-docs.deepseek.com. Модель: например «deepseek-chat» (или «deepseek-reasoner»).
+            </p>
             {masks.or && (
               <p className="mt-2 text-sm text-zinc-600">
                 Текущий ключ в БД: <span className="font-mono text-zinc-800">{masks.or}</span>
@@ -172,7 +175,7 @@ export default function AdminSettingsPage() {
                   if (e.target.checked) setOpenrouterKey("");
                 }}
               />
-              Удалить ключ KIE из базы (будет использован .env при наличии)
+              Удалить ключ DeepSeek из базы (будет использован .env при наличии)
             </label>
           </div>
 

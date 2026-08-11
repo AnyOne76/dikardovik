@@ -20,7 +20,7 @@ export async function ensureAppSettingsRow(): Promise<void> {
       perplexityApiKey: "",
       openrouterApiKey: "",
       perplexityModel: "sonar-pro",
-      openrouterModel: "openai/gpt-4o-mini",
+      openrouterModel: "deepseek-chat",
     },
     update: {},
   });
@@ -46,7 +46,7 @@ export async function getResolvedApiConfig(): Promise<ResolvedApiConfig> {
     perplexityModel:
       dbPxModel || process.env.PERPLEXITY_MODEL?.trim() || "sonar-pro",
     openrouterModel:
-      dbOrModel || process.env.OPENROUTER_MODEL?.trim() || "openai/gpt-4o-mini",
+      dbOrModel || process.env.OPENROUTER_MODEL?.trim() || "deepseek-chat",
   };
 }
 

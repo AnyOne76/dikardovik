@@ -2,7 +2,7 @@ import type { ResolvedApiConfig } from "@/lib/api-settings";
 import { assertStrictStructure, instructionSchema, toPrintableText, type InstructionPayload } from "@/lib/di-contract";
 import { patchEmptyInstructionLists } from "@/lib/di-rules";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
-import { KIE_CLAUDE_URL, buildKieClaudeBody, extractClaudeText } from "@/lib/kie-claude";
+import { DEEPSEEK_CHAT_URL, buildDeepseekBody, extractDeepseekText } from "@/lib/deepseek";
 
 export type AnalyzeIssueLike = { code?: string; message: string; path?: string };
 export type ComplianceIssueLike = { section: string; severity: string; message: string };
@@ -117,7 +117,7 @@ export async function improveInstructionFromAnalyzeFeedback(
 ): Promise<{ payload: InstructionPayload; model: string; printablePreview: string }> {
   const apiKey = resolved.openrouterApiKey.trim();
   if (!apiKey) {
-    throw new Error("Ключ KIE не настроен.");
+    throw new Error("Ключ DeepSeek не настроен.");
   }
   if (!feedbackBrief.trim()) {
     throw new Error("Нет текста замечаний для доработки.");
@@ -166,28 +166,28 @@ ${feedbackBrief}
 Входной JSON:
 ${rawJson}`;
 
-  const resp = await fetch(KIE_CLAUDE_URL, {
+  const resp = await fetch(DEEPSEEK_CHAT_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     signal: AbortSignal.timeout(120_000),
-    body: buildKieClaudeBody({ model, prompt, temperature: 0.15, maxTokens: 8192 }),
+    body: buildDeepseekBody({ model, prompt, temperature: 0.15, maxTokens: 8192 }),
   });
 
   if (!resp.ok) {
     const t = await resp.text().catch(() => "");
-    throw new Error(`Kie Claude API: ${resp.status} ${t.slice(0, 200)}`);
+    throw new Error(`DeepSeek API: ${resp.status} ${t.slice(0, 200)}`);
   }
 
   let data: unknown;
   try {
     data = await resp.json();
   } catch {
-    throw new Error("Ответ Kie Claude API не JSON. Попробуйте ещё раз.");
+    throw new Error("Ответ DeepSeek API не JSON. Попробуйте ещё раз.");
   }
-  const content = extractClaudeText(data);
+  const content = extractDeepseekText(data);
   const jsonText = content.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
 
   let parsed: unknown;
