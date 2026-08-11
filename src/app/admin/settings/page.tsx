@@ -144,7 +144,7 @@ export default function AdminSettingsPage() {
           <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
             <h2 className="text-lg font-semibold text-orange-700">DeepSeek</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              Ключ с сайта api-docs.deepseek.com. Модель: например «deepseek-chat» (или «deepseek-reasoner»).
+              Ключ с сайта api-docs.deepseek.com. Модель: например «deepseek-v4-flash» (быстрее) или «deepseek-v4-pro» (точнее).
             </p>
             {masks.or && (
               <p className="mt-2 text-sm text-zinc-600">
