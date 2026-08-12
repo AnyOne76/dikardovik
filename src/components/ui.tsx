@@ -64,7 +64,10 @@ export function Page({
   children: ReactNode;
   width?: "narrow" | "wide" | "full";
 }) {
-  const max = width === "narrow" ? "max-w-2xl" : width === "full" ? "max-w-7xl" : "max-w-6xl";
+  // "full" — для страниц с документом: таблице ДИ нужна ширина, иначе пункты
+  // рвутся на обрывки. Верхняя граница не даёт строкам расползтись на всю
+  // ширину большого монитора.
+  const max = width === "narrow" ? "max-w-2xl" : width === "full" ? "max-w-[1600px]" : "max-w-6xl";
   return <main className={cx("mx-auto w-full px-4 py-8 sm:px-6", max)}>{children}</main>;
 }
 

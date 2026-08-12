@@ -137,7 +137,7 @@ function DirectorsCard() {
 
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <Input
-                    placeholder="Новый директор — Иванов Иван Иванович"
+                    placeholder="Новый директор — Иванов И.И."
                     value={draft}
                     onChange={(e) => setDrafts((prev) => ({ ...prev, [entity.id]: e.target.value }))}
                   />

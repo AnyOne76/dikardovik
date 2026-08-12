@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getFinalNoteLines } from "@/lib/di-rules";
 import { DEFAULT_LEGAL_ENTITY_ID, LEGAL_ENTITIES, getLegalEntity } from "@/lib/legal-entities";
 import {
@@ -16,7 +16,6 @@ import {
   Page,
   PageHeader,
   Select,
-  Spinner,
 } from "@/components/ui";
 
 type GenerateResponse = {
@@ -46,6 +45,57 @@ type GenerateResponse = {
     };
   };
 };
+
+/**
+ * Шкала генерации. Модель не сообщает реального прогресса, поэтому шкала —
+ * честная оценка по времени: растёт быстро в начале и асимптотически подходит
+ * к 95 %, но никогда не доходит до 100 % сама. Последние 5 % закрывает только
+ * фактически пришедший ответ, иначе полоса врала бы про завершение.
+ */
+function GenerationProgress() {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = Date.now();
+    const timer = setInterval(() => setElapsed((Date.now() - start) / 1000), 250);
+    return () => clearInterval(timer);
+  }, []);
+
+  const percent = 95 * (1 - Math.exp(-elapsed / 30));
+  const stage =
+    elapsed < 12
+      ? "Подбираем нормативную базу"
+      : elapsed < 35
+        ? "Собираем разделы документа"
+        : elapsed < 70
+          ? "Проверяем формулировки"
+          : "Финальная вычитка текста";
+
+  return (
+    <div className="w-full max-w-sm">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-sm font-medium text-zinc-900">{stage}</p>
+        <p className="tabular-nums text-sm text-zinc-500">{Math.round(percent)}%</p>
+      </div>
+      <div
+        className="mt-2.5 h-2 overflow-hidden rounded-full bg-zinc-200"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(percent)}
+        aria-label="Готовность документа"
+      >
+        <div
+          className="h-full rounded-full bg-orange-600 transition-[width] duration-300 ease-out"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <p className="mt-2.5 tabular-nums text-xs text-zinc-500">
+        Прошло {Math.floor(elapsed)} с · обычно 30–90 с. Не закрывайте страницу.
+      </p>
+    </div>
+  );
+}
 
 function DocRow({ label, items }: { label: string; items: string[] }) {
   return (
@@ -196,11 +246,7 @@ export default function HomePage() {
               {loading ? "Формируем документ..." : "Сформировать ДИ"}
             </Button>
 
-            {loading && (
-              <p className="text-center text-xs text-zinc-500">
-                Обычно занимает от 30 секунд до полутора минут. Не закрывайте страницу.
-              </p>
-            )}
+            {loading && <GenerationProgress />}
             {error && <Notice tone="error">{error}</Notice>}
           </div>
         </Card>
@@ -216,10 +262,33 @@ export default function HomePage() {
             </div>
           )}
 
+          {/* Скелет будущего документа: строки проявляются по очереди, поэтому
+              видно, что процесс идёт, а не завис. */}
           {loading && (
-            <Card className="flex min-h-90 flex-col items-center justify-center gap-3 text-center">
-              <Spinner className="size-6 text-orange-600" />
-              <p className="text-sm text-zinc-500">Собираем разделы и вычитываем формулировки...</p>
+            <Card className="min-h-90 p-0">
+              <div className="border-b border-zinc-200 px-5 py-4">
+                <div className="mx-auto h-4 w-64 animate-pulse rounded bg-zinc-200" />
+              </div>
+              <div className="divide-y divide-zinc-200">
+                {[0, 1, 2, 3, 4, 5].map((row) => (
+                  <div key={row} className="flex gap-5 px-5 py-4">
+                    <div
+                      className="h-4 w-56 shrink-0 animate-pulse rounded bg-zinc-200"
+                      style={{ animationDelay: `${row * 120}ms` }}
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div
+                        className="h-4 w-full animate-pulse rounded bg-zinc-100"
+                        style={{ animationDelay: `${row * 120 + 60}ms` }}
+                      />
+                      <div
+                        className="h-4 w-4/5 animate-pulse rounded bg-zinc-100"
+                        style={{ animationDelay: `${row * 120 + 120}ms` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </Card>
           )}
 

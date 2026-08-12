@@ -33,7 +33,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     id: "mpz",
     label: "ООО «МПЗ Мясницкий ряд»",
     companyName: "ООО «МПЗ Мясницкий ряд», г. Одинцово. Московская область",
-    directorName: "Филиппов Денис Сергеевич",
+    directorName: "Филиппов Д.С.",
     showBrandMark: true,
     departments: [
       "Административно-хозяйственная служба",
@@ -63,7 +63,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     // По решению пользователя: шапка ФММР остаётся такой же, как у МПЗ (лого + текст),
     // меняется только генеральный директор.
     companyName: "ООО «МПЗ Мясницкий ряд», г. Одинцово. Московская область",
-    directorName: "Васильева Ирина Ивановна",
+    directorName: "Васильева И.И.",
     showBrandMark: true,
     departments: [
       "Департамент ритейла и франчайзинга / Отдел организационного развития",
@@ -87,7 +87,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     label: "Бискар",
     // Логотип и упоминание "Мясницкий ряд" убраны — вместо этого название своей компании.
     companyName: "ООО «Бискар»",
-    directorName: "Маркова Елена Сергеевна",
+    directorName: "Маркова Е.С.",
     showBrandMark: false,
     departments: ["Служба главного инженера", "Финансово-Экономическая служба", "Администрация"],
   },
@@ -95,7 +95,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     id: "it-expert",
     label: "ИТ Эксперт",
     companyName: "ООО «ИТ Эксперт»",
-    directorName: "Черепова Любовь Константиновна",
+    directorName: "Черепова Л.К.",
     showBrandMark: false,
     departments: [
       "Служба информационных технологий / Отдел разработки программного обеспечения",
