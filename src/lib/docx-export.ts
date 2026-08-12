@@ -145,7 +145,7 @@ function mergedLnaAndEmployeeMustKnowParagraphs(localRegs: string[], employeeMus
   return blocks;
 }
 
-function cell(children: Paragraph[], options: { width?: number; shaded?: boolean } = {}) {
+function cell(children: (Paragraph | Table)[], options: { width?: number; shaded?: boolean } = {}) {
   return new TableCell({
     width: options.width ? { size: options.width, type: WidthType.PERCENTAGE } : undefined,
     verticalAlign: VerticalAlign.CENTER,

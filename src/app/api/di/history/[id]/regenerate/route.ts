@@ -222,23 +222,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const current =
     section === "requiredQualification"
       ? payload.sections.general.requiredQualification
-      : section === "subordination"
-        ? payload.sections.general.subordination
-        : section === "hiringProcedure"
-          ? payload.sections.general.hiringProcedure
-          : section === "substitutionProcedure"
-            ? payload.sections.general.substitutionProcedure
-            : section === "regulatoryDocuments"
-              ? payload.sections.general.regulatoryDocuments
-              : section === "localRegulations"
-                ? payload.sections.general.localRegulations
-                : section === "employeeMustKnow"
-                  ? payload.sections.general.employeeMustKnow
-                  : section === "duties.items"
-                    ? payload.sections.duties.items
-                    : section === "rights.items"
-                      ? payload.sections.rights.items
-                      : payload.sections.responsibility.items;
+      : section === "hiringProcedure"
+        ? payload.sections.general.hiringProcedure
+        : section === "substitutionProcedure"
+          ? payload.sections.general.substitutionProcedure
+          : section === "regulatoryDocuments"
+            ? payload.sections.general.regulatoryDocuments
+            : section === "localRegulations"
+              ? payload.sections.general.localRegulations
+              : section === "employeeMustKnow"
+                ? payload.sections.general.employeeMustKnow
+                : section === "duties.items"
+                  ? payload.sections.duties.items
+                  : section === "rights.items"
+                    ? payload.sections.rights.items
+                    : payload.sections.responsibility.items;
 
   // Keep UI stable, but never go below mandatory minimums from the generation prompt.
   const minBySection: Record<SectionKey, number> = {
@@ -260,23 +258,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const sectionHuman =
     section === "requiredQualification"
       ? "Требуемая квалификация и стаж работы по данной должности"
-      : section === "subordination"
-        ? "Подчиненность (только кому подчиняется)"
-        : section === "hiringProcedure"
-          ? "Прием на работу"
-          : section === "substitutionProcedure"
-            ? "Замещение на время отсутствия"
-            : section === "regulatoryDocuments"
-              ? "Нормативные документы, которыми руководствуется в своей деятельности"
-              : section === "localRegulations"
-                ? "Локально-нормативные акты"
-                : section === "employeeMustKnow"
-                  ? "Работник должен знать"
-                  : section === "duties.items"
-                    ? "Работник обязан"
-                    : section === "rights.items"
-                      ? "Работник имеет право"
-                      : "Работник несет ответственность за";
+      : section === "hiringProcedure"
+        ? "Прием на работу"
+        : section === "substitutionProcedure"
+          ? "Замещение на время отсутствия"
+          : section === "regulatoryDocuments"
+            ? "Нормативные документы, которыми руководствуется в своей деятельности"
+            : section === "localRegulations"
+              ? "Локально-нормативные акты"
+              : section === "employeeMustKnow"
+                ? "Работник должен знать"
+                : section === "duties.items"
+                  ? "Работник обязан"
+                  : section === "rights.items"
+                    ? "Работник имеет право"
+                    : "Работник несет ответственность за";
 
   let currentFactsText = "";
   try {
@@ -341,7 +337,6 @@ ${mandatoryRules.join("\n")}
 
   // Apply section update
   if (section === "requiredQualification") payload.sections.general.requiredQualification = padded;
-  if (section === "subordination") payload.sections.general.subordination = padded;
   if (section === "hiringProcedure") payload.sections.general.hiringProcedure = [MANDATORY_HIRING_TEXT];
   if (section === "substitutionProcedure") payload.sections.general.substitutionProcedure = padded;
   if (section === "regulatoryDocuments") payload.sections.general.regulatoryDocuments = padded;
