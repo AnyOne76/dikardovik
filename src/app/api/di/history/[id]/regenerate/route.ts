@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertStrictStructure, instructionSchema, type InstructionPayload } from "@/lib/di-contract";
-import { applyTripleTextQuality } from "@/lib/di-text-quality";
+import { applyTripleTextQuality, proofreadSectionItems } from "@/lib/di-text-quality";
 import {
   capitalizeListItems,
   ensureResponsibilityItems,
@@ -51,6 +51,21 @@ type SectionKey =
   | "duties.items"
   | "rights.items"
   | "responsibility.items";
+
+/** Читает пункты раздела по его ключу — нужно для точечной вычитки. */
+function readSectionItems(payload: InstructionPayload, section: SectionKey): string[] {
+  if (section === "duties.items") return payload.sections.duties.items;
+  if (section === "rights.items") return payload.sections.rights.items;
+  if (section === "responsibility.items") return payload.sections.responsibility.items;
+  return payload.sections.general[section];
+}
+
+function writeSectionItems(payload: InstructionPayload, section: SectionKey, items: string[]): void {
+  if (section === "duties.items") payload.sections.duties.items = items;
+  else if (section === "rights.items") payload.sections.rights.items = items;
+  else if (section === "responsibility.items") payload.sections.responsibility.items = items;
+  else payload.sections.general[section] = items;
+}
 
 function normalizeTerminology(text: string): string {
   // Keep it consistent with openrouter.ts terminology normalization.
@@ -375,7 +390,18 @@ ${mandatoryRules.join("\n")}
   }
 
   payload = normalizePayload(payload);
-  payload = await applyTripleTextQuality(payload, { resolvedApi: apiConfig });
+  // Нормализация и орфография — по всему документу (быстро, без сети к модели).
+  payload = await applyTripleTextQuality(payload, { skipLlmProofread: true });
+
+  // Редакторский проход LLM — только по пересобранному разделу. Остальные
+  // разделы уже вычитаны, и повторять их означало бы ждать десятки секунд зря.
+  // "Прием на работу" пропускаем: там фиксированная формулировка.
+  if (section !== "hiringProcedure") {
+    const currentItems = readSectionItems(payload, section);
+    const proofed = await proofreadSectionItems(currentItems, apiConfig);
+    if (proofed) writeSectionItems(payload, section, proofed);
+  }
+
   assertStrictStructure(payload);
   instructionSchema.parse(payload); // re-check full schema
 

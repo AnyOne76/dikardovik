@@ -248,6 +248,54 @@ ${JSON.stringify(slice)}
   }
 }
 
+/**
+ * Редакторская вычитка одного списка строк.
+ *
+ * Нужна там, где заново собран ровно один раздел: гонять ради него через модель
+ * весь документ — это лишние десятки секунд ожидания и лишние токены, а остальные
+ * разделы всё равно уже вычитаны. Количество строк обязано совпасть, иначе ответ
+ * отбрасывается и остаётся исходный текст.
+ */
+export async function proofreadSectionItems(
+  items: string[],
+  resolved: ResolvedApiConfig,
+): Promise<string[] | null> {
+  const apiKey = resolved.openrouterApiKey.trim();
+  if (!apiKey || items.length === 0) return null;
+
+  const prompt = `Ты профессиональный редактор кадровых документов на русском языке.
+
+Исправь ТОЛЬКО орфографию, пунктуацию и очевидные грамматические огрехи.
+Запрещено: менять смысл, сокращать или дополнять содержание, объединять или дробить пункты.
+
+Верни ТОЛЬКО JSON-массив строк той же длины (${items.length}), без markdown и пояснений:
+
+${JSON.stringify(items)}`;
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 45_000);
+  try {
+    const resp = await fetch(DEEPSEEK_CHAT_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: buildDeepseekBody({ model: resolved.openrouterModel, prompt, temperature: 0.1, maxTokens: 8192 }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const content = extractDeepseekText(data);
+    const jsonText = content.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+    const parsed = JSON.parse(jsonText) as unknown;
+    if (!Array.isArray(parsed) || parsed.length !== items.length) return null;
+    if (!parsed.every((x) => typeof x === "string" && x.trim().length > 0)) return null;
+    return (parsed as string[]).map((x) => sanitizeInstructionSurfaceText(x));
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 function collectAllEditableStrings(payload: InstructionPayload): string[] {
   const { templateMeta, sections, signatures } = payload;
   return [

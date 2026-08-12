@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { InstructionPayload } from "@/lib/di-contract";
 import { FIXED_SUBORDINATION_LINES, getFinalNoteLines } from "@/lib/di-rules";
-import { Badge, Button, Card, Field, Input, Notice, Page, PageHeader, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Field, Input, Notice, Page, PageHeader, Textarea, TimedProgress } from "@/components/ui";
 
 function PreviewRow({ label, items }: { label: string; items: string[] }) {
   return (
@@ -78,13 +78,30 @@ function SectionEditor({
           {fixed ? "Зафиксировано" : "Перегенерировать"}
         </Button>
       </div>
-      <Textarea
-        rows={rows}
-        value={itemsToText(value)}
-        readOnly={fixed}
-        onChange={(e) => onChange(textToItems(e.target.value))}
-        className={fixed ? "resize-y bg-zinc-50 text-zinc-500" : "resize-y"}
-      />
+
+      {/* Пока раздел пересобирается, поле заменяется шкалой: иначе видно старый
+          текст и непонятно, идёт работа или всё зависло. */}
+      {regenerating ? (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-5">
+          <TimedProgress
+            compact
+            tau={14}
+            stages={[
+              { until: 8, label: "Собираем формулировки раздела" },
+              { until: 20, label: "Сверяем с нормативной базой" },
+              { until: Infinity, label: "Вычитываем текст" },
+            ]}
+          />
+        </div>
+      ) : (
+        <Textarea
+          rows={rows}
+          value={itemsToText(value)}
+          readOnly={fixed}
+          onChange={(e) => onChange(textToItems(e.target.value))}
+          className={fixed ? "resize-y bg-zinc-50 text-zinc-500" : "resize-y"}
+        />
+      )}
     </div>
   );
 }

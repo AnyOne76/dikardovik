@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 /**
@@ -135,6 +136,67 @@ export function LinkButton({
     <a href={href} className={cx(buttonBase, buttonVariants[variant], buttonSizes[size], className)} {...rest}>
       {children}
     </a>
+  );
+}
+
+/**
+ * Шкала ожидания для запросов к модели. Реального прогресса она не сообщает,
+ * поэтому полоса — оценка по времени: растёт быстро вначале и асимптотически
+ * подходит к 95 %. Оставшееся закрывает только пришедший ответ, иначе полоса
+ * упиралась бы в 100 % и продолжала висеть.
+ *
+ * `tau` — характерное время ответа в секундах: за него шкала доходит до ~60 %.
+ * `stages` задаёт подписи этапов по возрастанию секунд.
+ */
+export function TimedProgress({
+  tau = 30,
+  stages,
+  compact = false,
+  className,
+}: {
+  tau?: number;
+  stages?: { until: number; label: string }[];
+  compact?: boolean;
+  className?: string;
+}) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = Date.now();
+    const timer = setInterval(() => setElapsed((Date.now() - start) / 1000), 250);
+    return () => clearInterval(timer);
+  }, []);
+
+  const percent = 95 * (1 - Math.exp(-elapsed / tau));
+  const stage = stages?.find((s) => elapsed < s.until)?.label ?? stages?.[stages.length - 1]?.label;
+
+  return (
+    <div className={cx("w-full", className)}>
+      {(stage || !compact) && (
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <p className={cx("font-medium text-zinc-900", compact ? "text-xs" : "text-sm")}>{stage}</p>
+          <p className={cx("tabular-nums text-zinc-500", compact ? "text-xs" : "text-sm")}>{Math.round(percent)}%</p>
+        </div>
+      )}
+      <div
+        className={cx("overflow-hidden rounded-full bg-zinc-200", compact ? "h-1" : "h-2")}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(percent)}
+        aria-label="Готовность"
+      >
+        <div
+          className="h-full rounded-full bg-orange-600 transition-[width] duration-300 ease-out"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      {!compact && (
+        <p className="mt-2.5 tabular-nums text-xs text-zinc-500">
+          Прошло {Math.floor(elapsed)} с · обычно 30–90 с. Не закрывайте страницу.
+        </p>
+      )}
+    </div>
   );
 }
 

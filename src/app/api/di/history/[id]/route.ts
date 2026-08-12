@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getResolvedApiConfig } from "@/lib/api-settings";
 import { assertStrictStructure, instructionSchema, toPrintableText, type InstructionPayload } from "@/lib/di-contract";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
 import { capitalizeListItems, FIXED_SUBORDINATION_LINES } from "@/lib/di-rules";
@@ -155,7 +154,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
   // Enforce terminology rules even when user edited text manually.
   const normalized = normalizePayloadTerminology(payload) as typeof payload;
-  payload = await applyTripleTextQuality(normalized, { resolvedApi: await getResolvedApiConfig() });
+  // Без редакторского прохода LLM: сохранение должно быть мгновенным, а текст
+  // сюда приходит уже вычитанным при генерации или перегенерации раздела.
+  // Ручную правку пользователя модель переписывать не должна — остаются только
+  // нормализация терминов и орфография.
+  payload = await applyTripleTextQuality(normalized, { skipLlmProofread: true });
   assertStrictStructure(payload);
 
   const finalText = toPrintableText(payload);

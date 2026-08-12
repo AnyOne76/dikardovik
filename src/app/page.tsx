@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { getFinalNoteLines } from "@/lib/di-rules";
 import { DEFAULT_LEGAL_ENTITY_ID, LEGAL_ENTITIES, getLegalEntity } from "@/lib/legal-entities";
 import {
@@ -16,6 +16,7 @@ import {
   Page,
   PageHeader,
   Select,
+  TimedProgress,
 } from "@/components/ui";
 
 type GenerateResponse = {
@@ -46,56 +47,12 @@ type GenerateResponse = {
   };
 };
 
-/**
- * Шкала генерации. Модель не сообщает реального прогресса, поэтому шкала —
- * честная оценка по времени: растёт быстро в начале и асимптотически подходит
- * к 95 %, но никогда не доходит до 100 % сама. Последние 5 % закрывает только
- * фактически пришедший ответ, иначе полоса врала бы про завершение.
- */
-function GenerationProgress() {
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    const start = Date.now();
-    const timer = setInterval(() => setElapsed((Date.now() - start) / 1000), 250);
-    return () => clearInterval(timer);
-  }, []);
-
-  const percent = 95 * (1 - Math.exp(-elapsed / 30));
-  const stage =
-    elapsed < 12
-      ? "Подбираем нормативную базу"
-      : elapsed < 35
-        ? "Собираем разделы документа"
-        : elapsed < 70
-          ? "Проверяем формулировки"
-          : "Финальная вычитка текста";
-
-  return (
-    <div className="w-full max-w-sm">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm font-medium text-zinc-900">{stage}</p>
-        <p className="tabular-nums text-sm text-zinc-500">{Math.round(percent)}%</p>
-      </div>
-      <div
-        className="mt-2.5 h-2 overflow-hidden rounded-full bg-zinc-200"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(percent)}
-        aria-label="Готовность документа"
-      >
-        <div
-          className="h-full rounded-full bg-orange-600 transition-[width] duration-300 ease-out"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-      <p className="mt-2.5 tabular-nums text-xs text-zinc-500">
-        Прошло {Math.floor(elapsed)} с · обычно 30–90 с. Не закрывайте страницу.
-      </p>
-    </div>
-  );
-}
+const GENERATION_STAGES = [
+  { until: 12, label: "Подбираем нормативную базу" },
+  { until: 35, label: "Собираем разделы документа" },
+  { until: 70, label: "Проверяем формулировки" },
+  { until: Infinity, label: "Финальная вычитка текста" },
+];
 
 function DocRow({ label, items }: { label: string; items: string[] }) {
   return (
@@ -246,7 +203,7 @@ export default function HomePage() {
               {loading ? "Формируем документ..." : "Сформировать ДИ"}
             </Button>
 
-            {loading && <GenerationProgress />}
+            {loading && <TimedProgress tau={30} stages={GENERATION_STAGES} />}
             {error && <Notice tone="error">{error}</Notice>}
           </div>
         </Card>

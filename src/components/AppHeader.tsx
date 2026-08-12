@@ -51,11 +51,11 @@ export function AppHeader() {
           className="flex shrink-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
         >
           <Image
-            src="/myasnitsky-logo.png"
+            src="/myasnitsky-logo-v2.png"
             alt="ООО МПЗ Мясницкий Ряд"
-            width={240}
-            height={96}
-            className="h-9 w-auto object-contain object-left"
+            width={1024}
+            height={855}
+            className="h-10 w-auto object-contain object-left"
             priority
           />
           <span className="hidden text-sm font-semibold tracking-tight text-zinc-900 sm:inline">
