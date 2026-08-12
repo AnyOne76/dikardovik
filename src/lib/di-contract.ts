@@ -32,7 +32,7 @@ export const instructionSchema = z.object({
     approvedBy: z.string().min(1),
     positionName: z.string().min(1),
     departmentName: z.string().min(1),
-    // Юрлицо, по которому формируется ДИ. Отсутствует в старых записях — тогда это МПЗ (эталон).
+    // Юрлицо, по которому формируется ДИ. Отсутствует в старых записях — тогда это МПЗ.
     legalEntityId: z.string().default(DEFAULT_LEGAL_ENTITY_ID),
   }),
   sections: z.object({

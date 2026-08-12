@@ -5,7 +5,7 @@
  * свой список структурных подразделений и признак того, нужно ли показывать
  * фирменный знак/логотип "Мясницкий ряд" в самом верху документа.
  *
- * МПЗ остаётся эталоном (как было изначально) и используется по умолчанию.
+ * МПЗ используется по умолчанию.
  */
 
 export const LEGAL_ENTITY_IDS = ["mpz", "fmmr", "biskar", "it-expert"] as const;
@@ -31,7 +31,7 @@ export const DEFAULT_LEGAL_ENTITY_ID: LegalEntityId = "mpz";
 export const LEGAL_ENTITIES: LegalEntity[] = [
   {
     id: "mpz",
-    label: "ООО «МПЗ Мясницкий ряд» (эталон)",
+    label: "ООО «МПЗ Мясницкий ряд»",
     companyName: "ООО «МПЗ Мясницкий ряд», г. Одинцово. Московская область",
     directorName: "Филиппов Д.С.",
     showBrandMark: true,
@@ -63,7 +63,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     // По решению пользователя: шапка ФММР остаётся такой же, как у МПЗ (лого + текст),
     // меняется только генеральный директор.
     companyName: "ООО «МПЗ Мясницкий ряд», г. Одинцово. Московская область",
-    directorName: "Васильева И.И.",
+    directorName: "Васильева Ирина Ивановна",
     showBrandMark: true,
     departments: [
       "Департамент ритейла и франчайзинга / Отдел организационного развития",
@@ -87,7 +87,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     label: "Бискар",
     // Логотип и упоминание "Мясницкий ряд" убраны — вместо этого название своей компании.
     companyName: "ООО «Бискар»",
-    directorName: "Маркова Е.С.",
+    directorName: "Маркова Елена Сергеевна",
     showBrandMark: false,
     departments: ["Служба главного инженера", "Финансово-Экономическая служба", "Администрация"],
   },
@@ -95,7 +95,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     id: "it-expert",
     label: "ИТ Эксперт",
     companyName: "ООО «ИТ Эксперт»",
-    directorName: "Черепова Л.К.",
+    directorName: "Черепова Любовь Константиновна",
     showBrandMark: false,
     departments: [
       "Служба информационных технологий / Отдел разработки программного обеспечения",
