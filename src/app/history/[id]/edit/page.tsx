@@ -11,12 +11,12 @@ function PreviewRow({ label, items }: { label: string; items: string[] }) {
     <tr className="align-top">
       <th
         scope="row"
-        className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-sm font-medium"
+        className="w-64 border-b border-zinc-200 bg-zinc-50 px-5 py-4 text-left align-top font-medium text-zinc-700"
       >
         {label}
       </th>
-      <td className="border-b border-zinc-200 px-4 py-3">
-        <ol className="list-decimal space-y-1.5 pl-5 text-sm">
+      <td className="border-b border-zinc-200 px-5 py-4">
+        <ol className="list-decimal space-y-2 pl-5 font-normal text-zinc-900">
           {items.map((item, idx) => (
             <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
           ))}
@@ -335,7 +335,7 @@ export default function EditHistoryPage() {
     : [];
 
   return (
-    <Page>
+    <Page width="full">
       <PageHeader
         title="Редактирование"
         subtitle={
@@ -428,28 +428,28 @@ export default function EditHistoryPage() {
       {!loading && payload && showPreview && (
         <Card className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <caption className="border-b border-zinc-200 px-4 py-3 text-center text-sm font-semibold tracking-[0.2em]">
+            <table className="w-full border-collapse text-[15px] leading-relaxed">
+              <caption className="border-b border-zinc-200 px-5 py-4 text-center text-sm font-semibold tracking-[0.2em]">
                 ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
               </caption>
               <tbody>
                 <tr className="align-top">
                   <th
                     scope="row"
-                    className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium"
+                    className="w-64 border-b border-zinc-200 bg-zinc-50 px-5 py-4 text-left align-top font-medium text-zinc-700"
                   >
                     Название штатной должности
                   </th>
-                  <td className="border-b border-zinc-200 px-4 py-3">{payload.templateMeta.positionName}</td>
+                  <td className="border-b border-zinc-200 px-5 py-4">{payload.templateMeta.positionName}</td>
                 </tr>
                 <tr className="align-top">
                   <th
                     scope="row"
-                    className="border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium"
+                    className="border-b border-zinc-200 bg-zinc-50 px-5 py-4 text-left align-top font-medium text-zinc-700"
                   >
                     Наименование структурного подразделения
                   </th>
-                  <td className="border-b border-zinc-200 px-4 py-3">{payload.templateMeta.departmentName}</td>
+                  <td className="border-b border-zinc-200 px-5 py-4">{payload.templateMeta.departmentName}</td>
                 </tr>
 
                 <PreviewSection title={payload.sections.general.heading} />

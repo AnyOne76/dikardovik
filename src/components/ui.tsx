@@ -64,7 +64,7 @@ export function Page({
   children: ReactNode;
   width?: "narrow" | "wide" | "full";
 }) {
-  const max = width === "narrow" ? "max-w-2xl" : width === "full" ? "max-w-7xl" : "max-w-5xl";
+  const max = width === "narrow" ? "max-w-2xl" : width === "full" ? "max-w-7xl" : "max-w-6xl";
   return <main className={cx("mx-auto w-full px-4 py-8 sm:px-6", max)}>{children}</main>;
 }
 

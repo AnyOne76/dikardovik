@@ -52,14 +52,16 @@ function DocRow({ label, items }: { label: string; items: string[] }) {
     <tr className="align-top">
       <th
         scope="row"
-        className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium text-zinc-900"
+        className="w-64 border-b border-zinc-200 bg-zinc-50 px-5 py-4 text-left align-top font-medium text-zinc-700"
       >
         {label}
       </th>
-      <td className="border-b border-zinc-200 px-4 py-3">
-        <ol className="list-decimal space-y-1.5 pl-5 text-zinc-900">
+      <td className="border-b border-zinc-200 px-5 py-4">
+        <ol className="list-decimal space-y-2 pl-5 font-normal text-zinc-900">
           {items.map((item, idx) => (
-            <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
+            <li key={`${idx}-${item.slice(0, 20)}`} className="pl-1">
+              {item}
+            </li>
           ))}
         </ol>
       </td>
@@ -72,7 +74,7 @@ function DocSection({ title }: { title: string }) {
     <tr>
       <td
         colSpan={2}
-        className="border-y border-zinc-200 bg-orange-50 px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-orange-700"
+        className="border-y border-zinc-200 bg-orange-50 px-5 py-3 text-center text-sm font-semibold tracking-wide text-orange-700"
       >
         {title}
       </td>
@@ -85,11 +87,11 @@ function MetaRow({ label, value }: { label: string; value: string }) {
     <tr className="align-top">
       <th
         scope="row"
-        className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium text-zinc-900"
+        className="w-64 border-b border-zinc-200 bg-zinc-50 px-5 py-4 text-left align-top font-medium text-zinc-700"
       >
         {label}
       </th>
-      <td className="border-b border-zinc-200 px-4 py-3">{value}</td>
+      <td className="border-b border-zinc-200 px-5 py-4 font-normal text-zinc-900">{value}</td>
     </tr>
   );
 }
@@ -140,13 +142,15 @@ export default function HomePage() {
   }
 
   return (
-    <Page>
+    <Page width="full">
       <PageHeader
         title="Должностная инструкция"
         subtitle="Заполните три поля — документ будет собран по корпоративному шаблону."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
+      {/* Форма узкая и фиксированная, документ занимает всё остальное:
+          в тесной колонке текст ДИ рвётся на нечитаемые обрывки. */}
+      <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
         <Card>
           <CardTitle hint="Шаблон и структура разделов фиксированы.">Параметры</CardTitle>
 
@@ -237,8 +241,8 @@ export default function HomePage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <caption className="border-b border-zinc-200 px-4 py-3 text-center text-sm font-semibold tracking-[0.2em] text-zinc-900">
+                <table className="w-full border-collapse text-[15px] leading-relaxed">
+                  <caption className="border-b border-zinc-200 px-5 py-4 text-center text-sm font-semibold tracking-[0.2em] text-zinc-900">
                     ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
                   </caption>
                   <tbody>
