@@ -249,14 +249,14 @@ export default function AnalyzePage() {
           <input
             type="file"
             accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="block w-full cursor-pointer rounded-lg border border-dashed border-[var(--border)] p-3 text-sm text-[var(--muted)] file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-[var(--accent-soft)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[var(--accent-strong)]"
+            className="block w-full cursor-pointer rounded-lg border border-dashed border-zinc-200 p-3 text-sm text-zinc-500 file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-orange-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-orange-700"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
 
-          <label className="mt-4 flex items-center gap-2 text-sm text-[var(--muted)]">
+          <label className="mt-4 flex items-center gap-2 text-sm text-zinc-500">
             <input
               type="checkbox"
-              className="size-4 rounded border-zinc-300 accent-[var(--accent)]"
+              className="size-4 rounded border-zinc-300 accent-orange-600"
               checked={checkCompliance}
               onChange={(e) => setCheckCompliance(e.target.checked)}
             />
@@ -321,14 +321,14 @@ export default function AnalyzePage() {
               )}
 
               {improveDiff.length > 0 && (
-                <details className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--background)] p-3 text-sm">
+                <details className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm">
                   <summary className="cursor-pointer font-medium">
                     Что изменилось после доработки ({improveDiff.length})
                   </summary>
                   <ul className="mt-2 max-h-80 space-y-3 overflow-y-auto pl-1">
                     {improveDiff.map((ch, idx) => (
-                      <li key={`${ch.path}-${idx}`} className="border-b border-[var(--border)] pb-2 last:border-0">
-                        <p className="font-mono text-xs text-[var(--muted)]">{ch.path}</p>
+                      <li key={`${ch.path}-${idx}`} className="border-b border-zinc-200 pb-2 last:border-0">
+                        <p className="font-mono text-xs text-zinc-500">{ch.path}</p>
                         <p className="mt-1 text-xs text-red-700 line-through">{ch.before}</p>
                         <p className="mt-0.5 text-xs text-emerald-800">{ch.after}</p>
                       </li>
@@ -337,9 +337,9 @@ export default function AnalyzePage() {
                 </details>
               )}
 
-              {result.verifyNote && <p className="mt-3 text-xs text-[var(--muted)]">{result.verifyNote}</p>}
+              {result.verifyNote && <p className="mt-3 text-xs text-zinc-500">{result.verifyNote}</p>}
 
-              <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs text-[var(--muted)]">
+              <p className="mt-3 border-t border-zinc-200 pt-3 text-xs text-zinc-500">
                 «Скачать DOCX» формирует файл по шаблону приложения из текущего JSON — это не копия загруженного
                 документа. «Доработать» отправляет JSON и замечания в модель; чтобы исправления совпали с повторной
                 проверкой, оставьте в поле тот же файл Word. Должность и подразделение не меняются.
@@ -352,15 +352,15 @@ export default function AnalyzePage() {
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-sm font-semibold">Соответствие ЕКС/ЕТКС</h2>
                 {result.compliance.sonarModel && (
-                  <p className="text-xs text-[var(--muted)]">Sonar: {result.compliance.sonarModel}</p>
+                  <p className="text-xs text-zinc-500">Sonar: {result.compliance.sonarModel}</p>
                 )}
               </div>
-              {result.compliance.note && <p className="mt-2 text-xs text-[var(--muted)]">{result.compliance.note}</p>}
+              {result.compliance.note && <p className="mt-2 text-xs text-zinc-500">{result.compliance.note}</p>}
               {result.compliance.issues?.length ? (
                 <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm">
                   {result.compliance.issues.map((i, idx) => (
                     <li key={`${i.section}-${idx}`}>
-                      <span className="text-xs font-medium text-[var(--muted)]">
+                      <span className="text-xs font-medium text-zinc-500">
                         {complianceSectionLabel(i.section)} · {severityLabel(i.severity)}:{" "}
                       </span>
                       {i.message}
@@ -368,7 +368,7 @@ export default function AnalyzePage() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-[var(--muted)]">
+                <p className="mt-2 text-sm text-zinc-500">
                   {result.compliance.ok ? "Замечаний не найдено." : "Не удалось выполнить проверку."}
                 </p>
               )}
@@ -381,7 +381,7 @@ export default function AnalyzePage() {
               <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm">
                 {result.issues.map((issue, i) => (
                   <li key={`${issue.code}-${i}`}>
-                    {issue.path && <span className="font-mono text-xs text-[var(--muted)]">{issue.path}: </span>}
+                    {issue.path && <span className="font-mono text-xs text-zinc-500">{issue.path}: </span>}
                     {issue.message}
                   </li>
                 ))}
@@ -393,7 +393,7 @@ export default function AnalyzePage() {
             <Card>
               <details>
                 <summary className="cursor-pointer text-sm font-semibold">Предпросмотр текста по шаблону</summary>
-                <pre className="mt-3 max-h-120 overflow-auto whitespace-pre-wrap rounded-lg bg-[var(--background)] p-3 text-xs">
+                <pre className="mt-3 max-h-120 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-xs">
                   {result.printablePreview}
                 </pre>
               </details>

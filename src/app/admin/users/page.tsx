@@ -168,11 +168,11 @@ export default function AdminUsersPage() {
 
       {lastReset && (
         <div className="mb-6">
-          <Card className="border-[var(--accent)]/30 bg-[var(--accent-soft)]">
-            <p className="text-sm font-medium text-[var(--accent-strong)]">
+          <Card className="border-orange-200 bg-orange-50">
+            <p className="text-sm font-medium text-orange-700">
               Новый пароль для {lastReset.login} — покажется только один раз
             </p>
-            <p className="mt-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 font-mono text-sm">
+            <p className="mt-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm">
               {lastReset.password}
             </p>
           </Card>
@@ -205,35 +205,35 @@ export default function AdminUsersPage() {
         </Card>
 
         <Card className="p-0">
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] p-5">
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 p-5">
             <h2 className="text-base font-semibold">Список</h2>
-            <span className="text-sm text-[var(--muted)]">{usersBusy ? "Обновление..." : `Всего: ${users.length}`}</span>
+            <span className="text-sm text-zinc-500">{usersBusy ? "Обновление..." : `Всего: ${users.length}`}</span>
           </div>
 
           {users.length === 0 ? (
-            <p className="px-5 py-10 text-center text-sm text-[var(--muted)]">Пользователи не найдены.</p>
+            <p className="px-5 py-10 text-center text-sm text-zinc-500">Пользователи не найдены.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="border-b border-[var(--border)] px-5 py-2.5 font-medium">Логин</th>
-                    <th className="border-b border-[var(--border)] px-3 py-2.5 font-medium">Роль</th>
-                    <th className="border-b border-[var(--border)] px-3 py-2.5 font-medium">Создан</th>
-                    <th className="border-b border-[var(--border)] px-5 py-2.5 text-right font-medium">Действия</th>
+                  <tr className="text-left text-xs uppercase tracking-wide text-zinc-500">
+                    <th className="border-b border-zinc-200 px-5 py-2.5 font-medium">Логин</th>
+                    <th className="border-b border-zinc-200 px-3 py-2.5 font-medium">Роль</th>
+                    <th className="border-b border-zinc-200 px-3 py-2.5 font-medium">Создан</th>
+                    <th className="border-b border-zinc-200 px-5 py-2.5 text-right font-medium">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id} className="align-middle">
-                      <td className="border-b border-[var(--border)] px-5 py-3 font-medium">{u.login}</td>
-                      <td className="border-b border-[var(--border)] px-3 py-3">
+                      <td className="border-b border-zinc-200 px-5 py-3 font-medium">{u.login}</td>
+                      <td className="border-b border-zinc-200 px-3 py-3">
                         <Badge tone={u.role === "admin" ? "accent" : "neutral"}>{u.role}</Badge>
                       </td>
-                      <td className="border-b border-[var(--border)] px-3 py-3 whitespace-nowrap text-[var(--muted)]">
+                      <td className="border-b border-zinc-200 px-3 py-3 whitespace-nowrap text-zinc-500">
                         {new Date(u.createdAt).toLocaleDateString("ru-RU")}
                       </td>
-                      <td className="border-b border-[var(--border)] px-5 py-3">
+                      <td className="border-b border-zinc-200 px-5 py-3">
                         <div className="flex flex-wrap justify-end gap-1.5">
                           <Button
                             size="sm"

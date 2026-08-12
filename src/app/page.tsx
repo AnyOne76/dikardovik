@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CardTitle,
+  DocumentIcon,
   Field,
   Input,
   LinkButton,
@@ -51,12 +52,12 @@ function DocRow({ label, items }: { label: string; items: string[] }) {
     <tr className="align-top">
       <th
         scope="row"
-        className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium text-[var(--foreground)]"
+        className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium text-zinc-900"
       >
         {label}
       </th>
-      <td className="border-b border-[var(--border)] px-4 py-3">
-        <ol className="list-decimal space-y-1.5 pl-5 text-[var(--foreground)]">
+      <td className="border-b border-zinc-200 px-4 py-3">
+        <ol className="list-decimal space-y-1.5 pl-5 text-zinc-900">
           {items.map((item, idx) => (
             <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
           ))}
@@ -71,7 +72,7 @@ function DocSection({ title }: { title: string }) {
     <tr>
       <td
         colSpan={2}
-        className="border-y border-[var(--border)] bg-[var(--accent-soft)] px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-[var(--accent-strong)]"
+        className="border-y border-zinc-200 bg-orange-50 px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-orange-700"
       >
         {title}
       </td>
@@ -84,11 +85,11 @@ function MetaRow({ label, value }: { label: string; value: string }) {
     <tr className="align-top">
       <th
         scope="row"
-        className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium text-[var(--foreground)]"
+        className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium text-zinc-900"
       >
         {label}
       </th>
-      <td className="border-b border-[var(--border)] px-4 py-3">{value}</td>
+      <td className="border-b border-zinc-200 px-4 py-3">{value}</td>
     </tr>
   );
 }
@@ -192,7 +193,7 @@ export default function HomePage() {
             </Button>
 
             {loading && (
-              <p className="text-center text-xs text-[var(--muted)]">
+              <p className="text-center text-xs text-zinc-500">
                 Обычно занимает от 30 секунд до полутора минут. Не закрывайте страницу.
               </p>
             )}
@@ -202,24 +203,25 @@ export default function HomePage() {
 
         <div className="min-w-0">
           {!result && !loading && (
-            <Card className="flex min-h-70 items-center justify-center text-center">
-              <p className="max-w-sm text-sm text-[var(--muted)]">
+            <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 bg-white/60 px-6 text-center">
+              <DocumentIcon className="size-12" />
+              <p className="max-w-sm text-sm text-zinc-500">
                 Готовый документ появится здесь. Его можно будет скачать в DOCX или открыть в редакторе для правок
                 по разделам.
               </p>
-            </Card>
+            </div>
           )}
 
           {loading && (
-            <Card className="flex min-h-70 flex-col items-center justify-center gap-3 text-center">
-              <Spinner className="size-6 text-[var(--accent)]" />
-              <p className="text-sm text-[var(--muted)]">Собираем разделы и вычитываем формулировки...</p>
+            <Card className="flex min-h-90 flex-col items-center justify-center gap-3 text-center">
+              <Spinner className="size-6 text-orange-600" />
+              <p className="text-sm text-zinc-500">Собираем разделы и вычитываем формулировки...</p>
             </Card>
           )}
 
           {result && !loading && (
             <Card className="p-0">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 p-5">
                 <div className="flex items-center gap-2.5">
                   <h2 className="text-base font-semibold">Документ сформирован</h2>
                   <Badge tone="accent">версия {result.version}</Badge>
@@ -236,7 +238,7 @@ export default function HomePage() {
 
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
-                  <caption className="border-b border-[var(--border)] px-4 py-3 text-center text-sm font-semibold tracking-[0.2em] text-[var(--foreground)]">
+                  <caption className="border-b border-zinc-200 px-4 py-3 text-center text-sm font-semibold tracking-[0.2em] text-zinc-900">
                     ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
                   </caption>
                   <tbody>
@@ -286,7 +288,7 @@ export default function HomePage() {
                 </table>
               </div>
 
-              <div className="border-t border-[var(--border)] bg-[var(--background)] p-5 text-sm text-[var(--muted)]">
+              <div className="border-t border-zinc-200 bg-zinc-50 p-5 text-sm text-zinc-500">
                 {getFinalNoteLines(result.payload.templateMeta.positionName).map((line, idx) => (
                   <p key={`${idx}-${line.slice(0, 20)}`} className={idx > 0 ? "mt-2" : ""}>
                     {line}

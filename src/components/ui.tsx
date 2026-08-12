@@ -15,7 +15,12 @@ function cx(...parts: Array<string | false | null | undefined>) {
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <section className={cx("rounded-xl border border-[var(--border)] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]", className)}>
+    <section
+      className={cx(
+        "rounded-xl border border-zinc-200/90 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_8px_24px_-12px_rgba(16,24,40,0.12)]",
+        className,
+      )}
+    >
       {children}
     </section>
   );
@@ -24,8 +29,8 @@ export function Card({ children, className }: { children: ReactNode; className?:
 export function CardTitle({ children, hint }: { children: ReactNode; hint?: ReactNode }) {
   return (
     <div className="mb-4">
-      <h2 className="text-base font-semibold text-[var(--foreground)]">{children}</h2>
-      {hint && <p className="mt-1 text-sm text-[var(--muted)]">{hint}</p>}
+      <h2 className="text-base font-semibold text-zinc-900">{children}</h2>
+      {hint && <p className="mt-1 text-sm text-zinc-500">{hint}</p>}
     </div>
   );
 }
@@ -41,10 +46,10 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-[var(--border)] pb-5">
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-5">
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-2xl">{title}</h1>
-        {subtitle && <p className="mt-1.5 text-sm text-[var(--muted)]">{subtitle}</p>}
+        <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">{title}</h1>
+        {subtitle && <p className="mt-1.5 text-sm text-zinc-500">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -66,12 +71,12 @@ export function Page({
 /* ------------------------------------------------------------------- элементы */
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55";
+  "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55";
 
 const buttonVariants = {
-  primary: "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]",
-  secondary: "border border-[var(--border)] bg-white text-[var(--foreground)] hover:bg-[var(--background)]",
-  ghost: "text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]",
+  primary: "bg-orange-600 text-white shadow-sm hover:bg-orange-700 active:bg-orange-800",
+  secondary: "border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50",
+  ghost: "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
   danger: "border border-red-200 bg-white text-red-700 hover:bg-red-50",
 } as const;
 
@@ -140,7 +145,7 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 const fieldBase =
-  "w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 disabled:bg-[var(--background)]";
+  "w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:bg-zinc-50";
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cx(fieldBase, "h-10", className)} {...rest} />;
@@ -170,9 +175,9 @@ export function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-zinc-900">{label}</label>
       {children}
-      {hint && <p className="mt-1.5 text-xs text-[var(--muted)]">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-zinc-500">{hint}</p>}
     </div>
   );
 }
@@ -183,8 +188,8 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
       className={cx(
         "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
         tone === "accent"
-          ? "bg-[var(--accent-soft)] text-[var(--accent-strong)]"
-          : "bg-[var(--background)] text-[var(--muted)]",
+          ? "bg-orange-50 text-orange-700"
+          : "bg-zinc-50 text-zinc-500",
       )}
     >
       {children}
@@ -197,15 +202,35 @@ export function Notice({ tone, children }: { tone: "error" | "success" | "info";
   const tones = {
     error: "border-red-200 bg-red-50 text-red-800",
     success: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    info: "border-[var(--border)] bg-[var(--background)] text-[var(--muted)]",
+    info: "border-zinc-200 bg-zinc-50 text-zinc-500",
   } as const;
   return <p className={cx("rounded-lg border px-3.5 py-2.5 text-sm", tones[tone])}>{children}</p>;
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-[var(--border)] bg-white px-6 py-12 text-center text-sm text-[var(--muted)]">
-      {children}
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+      <DocumentIcon />
+      <p className="max-w-sm text-sm text-zinc-500">{children}</p>
     </div>
+  );
+}
+
+/** Лист документа с загнутым углом — метафора ДИ, используется в пустых состояниях. */
+export function DocumentIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={cx("size-10 text-zinc-300", className)}
+      viewBox="0 0 40 48"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 5a2 2 0 0 1 2-2h18l14 14v26a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Z" />
+      <path d="M23 3v14h14" />
+      <path d="M11 26h18M11 33h12" strokeLinecap="round" />
+    </svg>
   );
 }

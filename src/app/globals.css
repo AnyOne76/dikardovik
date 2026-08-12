@@ -1,37 +1,15 @@
 @import "tailwindcss";
 
 /*
- * Строгая корпоративная палитра: нейтральный светлый фон, белые карточки,
- * фирменный оранжевый — только как акцент (главное действие, активный пункт
- * меню, ссылки). Документ должен читаться как документ, а не как витрина.
+ * Цвета берём из палитры Tailwind прямо в классах (zinc — нейтраль, orange —
+ * фирменный акцент). Своих переменных намеренно нет: если такая переменная
+ * почему-либо не доедет до собранного CSS, границы и кнопки станут невидимыми,
+ * а по классам это невозможно.
  */
-:root {
-  --background: #f6f7f9;
-  --surface: #ffffff;
-  --foreground: #16181d;
-  --muted: #5c6370;
-  --border: #e3e6ea;
-  --accent: #d1600f;
-  --accent-strong: #b8500a;
-  --accent-soft: #fdf3ec;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-muted: var(--muted);
-  --color-line: var(--border);
-  --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-strong);
-  --color-accent-soft: var(--accent-soft);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #f6f7f9;
+  color: #16181d;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;
 }

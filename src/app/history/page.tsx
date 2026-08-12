@@ -83,7 +83,7 @@ export default function HistoryPage() {
         actions={
           <Link
             href="/"
-            className="inline-flex h-10 items-center rounded-lg border border-[var(--border)] bg-white px-4 text-sm font-medium transition-colors hover:bg-[var(--background)]"
+            className="inline-flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium transition-colors hover:bg-zinc-50"
           >
             Новая инструкция
           </Link>
@@ -101,10 +101,10 @@ export default function HistoryPage() {
       <div className="mb-3 flex h-10 items-center justify-between gap-3">
         {items.length > 0 ? (
           <>
-            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-500">
               <input
                 type="checkbox"
-                className="size-4 rounded border-zinc-300 accent-[var(--accent)]"
+                className="size-4 rounded border-zinc-300 accent-orange-600"
                 checked={allSelected}
                 ref={(el) => {
                   if (el) el.indeterminate = someSelected && !allSelected;
@@ -132,7 +132,7 @@ export default function HistoryPage() {
       {loading ? (
         <div className="space-y-2.5">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-18 animate-pulse rounded-xl border border-[var(--border)] bg-white" />
+            <div key={i} className="h-18 animate-pulse rounded-xl border border-zinc-200 bg-white" />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -142,18 +142,18 @@ export default function HistoryPage() {
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
             >
               <input
                 type="checkbox"
-                className="size-4 shrink-0 rounded border-zinc-300 accent-[var(--accent)]"
+                className="size-4 shrink-0 rounded border-zinc-300 accent-orange-600"
                 checked={!!selected[item.id]}
                 onChange={() => toggleOne(item.id)}
                 aria-label={`Выбрать ${item.title}`}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-[var(--foreground)]">{item.title}</p>
-                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                <p className="truncate font-medium text-zinc-900">{item.title}</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
                   Версия {item.version}
                   {item.createdAt && ` · ${formatDate(item.createdAt)}`}
                 </p>
@@ -169,7 +169,7 @@ export default function HistoryPage() {
                   variant="ghost"
                   size="sm"
                   disabled={busy}
-                  className="text-[var(--muted)] hover:text-red-700"
+                  className="text-zinc-500 hover:text-red-700"
                   onClick={() => {
                     if (confirm("Удалить эту запись из истории?")) void remove([item.id]);
                   }}

@@ -11,11 +11,11 @@ function PreviewRow({ label, items }: { label: string; items: string[] }) {
     <tr className="align-top">
       <th
         scope="row"
-        className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left text-sm font-medium"
+        className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left text-sm font-medium"
       >
         {label}
       </th>
-      <td className="border-b border-[var(--border)] px-4 py-3">
+      <td className="border-b border-zinc-200 px-4 py-3">
         <ol className="list-decimal space-y-1.5 pl-5 text-sm">
           {items.map((item, idx) => (
             <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
@@ -31,7 +31,7 @@ function PreviewSection({ title }: { title: string }) {
     <tr>
       <td
         colSpan={2}
-        className="border-y border-[var(--border)] bg-[var(--accent-soft)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--accent-strong)]"
+        className="border-y border-zinc-200 bg-orange-50 px-4 py-2.5 text-center text-sm font-semibold text-orange-700"
       >
         {title}
       </td>
@@ -83,7 +83,7 @@ function SectionEditor({
         value={itemsToText(value)}
         readOnly={fixed}
         onChange={(e) => onChange(textToItems(e.target.value))}
-        className={fixed ? "resize-y bg-[var(--background)] text-[var(--muted)]" : "resize-y"}
+        className={fixed ? "resize-y bg-zinc-50 text-zinc-500" : "resize-y"}
       />
     </div>
   );
@@ -371,7 +371,7 @@ export default function EditHistoryPage() {
         </div>
       )}
 
-      {loading && <div className="h-96 animate-pulse rounded-xl border border-[var(--border)] bg-white" />}
+      {loading && <div className="h-96 animate-pulse rounded-xl border border-zinc-200 bg-white" />}
 
       {!loading && !payload && <Notice tone="error">Не удалось загрузить документ.</Notice>}
 
@@ -379,7 +379,7 @@ export default function EditHistoryPage() {
         <Card>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Должность">
-              <Input readOnly value={payload.templateMeta.positionName} className="bg-[var(--background)]" />
+              <Input readOnly value={payload.templateMeta.positionName} className="bg-zinc-50" />
             </Field>
             <Field label="Подразделение">
               <Input
@@ -393,7 +393,7 @@ export default function EditHistoryPage() {
             </Field>
           </div>
 
-          <p className="mt-4 text-xs text-[var(--muted)]">Одна строка в поле — один пункт документа.</p>
+          <p className="mt-4 text-xs text-zinc-500">Одна строка в поле — один пункт документа.</p>
 
           <div className="mt-4 space-y-5">
             {generalBlocks.map((block) => (
@@ -429,27 +429,27 @@ export default function EditHistoryPage() {
         <Card className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
-              <caption className="border-b border-[var(--border)] px-4 py-3 text-center text-sm font-semibold tracking-[0.2em]">
+              <caption className="border-b border-zinc-200 px-4 py-3 text-center text-sm font-semibold tracking-[0.2em]">
                 ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
               </caption>
               <tbody>
                 <tr className="align-top">
                   <th
                     scope="row"
-                    className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium"
+                    className="w-[32%] border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium"
                   >
                     Название штатной должности
                   </th>
-                  <td className="border-b border-[var(--border)] px-4 py-3">{payload.templateMeta.positionName}</td>
+                  <td className="border-b border-zinc-200 px-4 py-3">{payload.templateMeta.positionName}</td>
                 </tr>
                 <tr className="align-top">
                   <th
                     scope="row"
-                    className="border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium"
+                    className="border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-left font-medium"
                   >
                     Наименование структурного подразделения
                   </th>
-                  <td className="border-b border-[var(--border)] px-4 py-3">{payload.templateMeta.departmentName}</td>
+                  <td className="border-b border-zinc-200 px-4 py-3">{payload.templateMeta.departmentName}</td>
                 </tr>
 
                 <PreviewSection title={payload.sections.general.heading} />
@@ -485,7 +485,7 @@ export default function EditHistoryPage() {
             </table>
           </div>
 
-          <div className="border-t border-[var(--border)] bg-[var(--background)] p-5 text-sm text-[var(--muted)]">
+          <div className="border-t border-zinc-200 bg-zinc-50 p-5 text-sm text-zinc-500">
             {getFinalNoteLines(payload.templateMeta.positionName).map((line, idx) => (
               <p key={`${idx}-${line.slice(0, 20)}`} className={idx > 0 ? "mt-2" : ""}>
                 {line}

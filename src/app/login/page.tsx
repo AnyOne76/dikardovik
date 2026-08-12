@@ -26,10 +26,10 @@ export default function LoginPage() {
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-12">
       <form
         onSubmit={onSubmit}
-        className="rounded-xl border border-[var(--border)] bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+        className="rounded-xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
       >
         <h1 className="text-lg font-semibold tracking-tight">Вход в систему</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">Генератор должностных инструкций</p>
+        <p className="mt-1 text-sm text-zinc-500">Генератор должностных инструкций</p>
 
         <div className="mt-6 space-y-4">
           <Field label="Логин">
@@ -53,9 +53,9 @@ export default function LoginPage() {
         </div>
       </form>
 
-      <p className="mt-4 text-center text-sm text-[var(--muted)]">
+      <p className="mt-4 text-center text-sm text-zinc-500">
         Нет аккаунта?{" "}
-        <Link href="/register" className="font-medium text-[var(--accent-strong)] hover:underline">
+        <Link href="/register" className="font-medium text-orange-700 hover:underline">
           Регистрация
         </Link>
       </p>

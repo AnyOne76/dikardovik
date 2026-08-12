@@ -38,10 +38,10 @@ export default function RegisterPage() {
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-12">
       <form
         onSubmit={onSubmit}
-        className="rounded-xl border border-[var(--border)] bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+        className="rounded-xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
       >
         <h1 className="text-lg font-semibold tracking-tight">Регистрация</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">Код приглашения выдаёт администратор.</p>
+        <p className="mt-1 text-sm text-zinc-500">Код приглашения выдаёт администратор.</p>
 
         <div className="mt-6 space-y-4">
           <Field label="Логин">
@@ -68,9 +68,9 @@ export default function RegisterPage() {
         </div>
       </form>
 
-      <p className="mt-4 text-center text-sm text-[var(--muted)]">
+      <p className="mt-4 text-center text-sm text-zinc-500">
         Уже есть аккаунт?{" "}
-        <Link href="/login" className="font-medium text-[var(--accent-strong)] hover:underline">
+        <Link href="/login" className="font-medium text-orange-700 hover:underline">
           Войти
         </Link>
       </p>

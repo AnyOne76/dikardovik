@@ -24,8 +24,8 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
       className={
         "inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium transition-colors " +
         (active
-          ? "bg-[var(--accent-soft)] text-[var(--accent-strong)]"
-          : "text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]")
+          ? "bg-orange-50 text-orange-700"
+          : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900")
       }
     >
       {label}
@@ -44,11 +44,11 @@ export function AppHeader() {
   const items = NAV.filter((item) => !item.adminOnly || role === "admin");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          className="flex shrink-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
         >
           <Image
             src="/myasnitsky-logo.png"
@@ -58,7 +58,7 @@ export function AppHeader() {
             className="h-9 w-auto object-contain object-left"
             priority
           />
-          <span className="hidden text-sm font-semibold tracking-tight text-[var(--foreground)] sm:inline">
+          <span className="hidden text-sm font-semibold tracking-tight text-zinc-900 sm:inline">
             Кадровый навигатор
           </span>
         </Link>
@@ -86,7 +86,7 @@ export function AppHeader() {
             <>
               <Link
                 href="/account"
-                className="hidden max-w-40 truncate rounded-lg px-2 text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)] md:inline"
+                className="hidden max-w-40 truncate rounded-lg px-2 text-sm text-zinc-500 transition-colors hover:text-zinc-900 md:inline"
                 title="Сменить пароль"
               >
                 {session.user.name}
@@ -94,7 +94,7 @@ export function AppHeader() {
               <button
                 type="button"
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="inline-flex h-9 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--background)]"
+                className="inline-flex h-9 items-center rounded-lg border border-zinc-200 px-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50"
               >
                 Выйти
               </button>

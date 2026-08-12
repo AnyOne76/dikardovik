@@ -91,7 +91,7 @@ function DirectorsCard() {
       {loading ? (
         <div className="space-y-3">
           {[0, 1].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-lg border border-[var(--border)]" />
+            <div key={i} className="h-28 animate-pulse rounded-lg border border-zinc-200" />
           ))}
         </div>
       ) : (
@@ -103,22 +103,22 @@ function DirectorsCard() {
             const draft = drafts[entity.id] ?? "";
 
             return (
-              <div key={entity.id} className="rounded-lg border border-[var(--border)] p-4">
+              <div key={entity.id} className="rounded-lg border border-zinc-200 p-4">
                 <p className="text-sm font-medium">{entity.label}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  Действующий: <span className="font-medium text-[var(--foreground)]">{current?.fullName ?? "не задан"}</span>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Действующий: <span className="font-medium text-zinc-900">{current?.fullName ?? "не задан"}</span>
                 </p>
 
                 {previous.length > 0 && (
-                  <ul className="mt-3 space-y-1.5 border-t border-[var(--border)] pt-3">
+                  <ul className="mt-3 space-y-1.5 border-t border-zinc-200 pt-3">
                     {previous.map((r) => (
                       <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                        <span className="text-[var(--muted)]">{r.fullName}</span>
+                        <span className="text-zinc-500">{r.fullName}</span>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => void send("PATCH", { id: r.id }, `Действующий директор: ${r.fullName}`)}
-                          className="text-[var(--accent-strong)] underline underline-offset-2 disabled:opacity-50"
+                          className="text-orange-700 underline underline-offset-2 disabled:opacity-50"
                         >
                           назначить текущим
                         </button>
@@ -126,7 +126,7 @@ function DirectorsCard() {
                           type="button"
                           disabled={busy}
                           onClick={() => void send("DELETE", { id: r.id }, "Директор удалён из списка")}
-                          className="text-[var(--muted)] underline underline-offset-2 hover:text-red-700 disabled:opacity-50"
+                          className="text-zinc-500 underline underline-offset-2 hover:text-red-700 disabled:opacity-50"
                         >
                           удалить
                         </button>
@@ -273,7 +273,7 @@ export default function AdminSettingsPage() {
       {loading ? (
         <div className="space-y-6">
           {[0, 1].map((i) => (
-            <div key={i} className="h-56 animate-pulse rounded-xl border border-[var(--border)] bg-white" />
+            <div key={i} className="h-56 animate-pulse rounded-xl border border-zinc-200 bg-white" />
           ))}
         </div>
       ) : (
@@ -284,8 +284,8 @@ export default function AdminSettingsPage() {
             </CardTitle>
             <div className="space-y-4">
               {masks.or && (
-                <p className="text-sm text-[var(--muted)]">
-                  Текущий ключ: <span className="font-mono text-[var(--foreground)]">{masks.or}</span>
+                <p className="text-sm text-zinc-500">
+                  Текущий ключ: <span className="font-mono text-zinc-900">{masks.or}</span>
                 </p>
               )}
               <Field label="Модель">
@@ -300,10 +300,10 @@ export default function AdminSettingsPage() {
                   disabled={clearOpenrouterKey}
                 />
               </Field>
-              <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+              <label className="flex items-center gap-2 text-sm text-zinc-500">
                 <input
                   type="checkbox"
-                  className="size-4 rounded border-zinc-300 accent-[var(--accent)]"
+                  className="size-4 rounded border-zinc-300 accent-orange-600"
                   checked={clearOpenrouterKey}
                   onChange={(e) => {
                     setClearOpenrouterKey(e.target.checked);
@@ -319,8 +319,8 @@ export default function AdminSettingsPage() {
             <CardTitle hint="Используется для подбора нормативных выдержек при проверке ДИ.">Perplexity</CardTitle>
             <div className="space-y-4">
               {masks.px && (
-                <p className="text-sm text-[var(--muted)]">
-                  Текущий ключ: <span className="font-mono text-[var(--foreground)]">{masks.px}</span>
+                <p className="text-sm text-zinc-500">
+                  Текущий ключ: <span className="font-mono text-zinc-900">{masks.px}</span>
                 </p>
               )}
               <Field label="Модель">
@@ -335,10 +335,10 @@ export default function AdminSettingsPage() {
                   disabled={clearPerplexityKey}
                 />
               </Field>
-              <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+              <label className="flex items-center gap-2 text-sm text-zinc-500">
                 <input
                   type="checkbox"
-                  className="size-4 rounded border-zinc-300 accent-[var(--accent)]"
+                  className="size-4 rounded border-zinc-300 accent-orange-600"
                   checked={clearPerplexityKey}
                   onChange={(e) => {
                     setClearPerplexityKey(e.target.checked);
