@@ -33,7 +33,7 @@ export const LEGAL_ENTITIES: LegalEntity[] = [
     id: "mpz",
     label: "ООО «МПЗ Мясницкий ряд»",
     companyName: "ООО «МПЗ Мясницкий ряд», г. Одинцово. Московская область",
-    directorName: "Филиппов Д.С.",
+    directorName: "Филиппов Денис Сергеевич",
     showBrandMark: true,
     departments: [
       "Административно-хозяйственная служба",
