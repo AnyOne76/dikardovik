@@ -11,6 +11,7 @@ import {
 import { patchEmptyInstructionLists } from "@/lib/di-rules";
 import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
 import { DEEPSEEK_CHAT_URL, buildDeepseekBody, extractDeepseekText } from "@/lib/deepseek";
+import { getResolvedApiConfig } from "@/lib/api-settings";
 
 loadEnvConfig(process.cwd());
 
@@ -290,8 +291,9 @@ export async function analyzeInstructionFromText(documentText: string): Promise<
   const truncated = documentText.length > MAX_TEXT_CHARS;
   const text = documentText.slice(0, MAX_TEXT_CHARS);
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+  const resolved = await getResolvedApiConfig();
+  const apiKey = resolved.openrouterApiKey;
+  const model = resolved.openrouterModel;
 
   if (!apiKey) {
     return {
@@ -299,7 +301,7 @@ export async function analyzeInstructionFromText(documentText: string): Promise<
       issues: [
         {
           code: "missing_api_key",
-          message: "Для анализа загруженного документа задайте OPENROUTER_API_KEY на сервере.",
+          message: "Для анализа загруженного документа задайте ключ DeepSeek в разделе «Настройки API».",
         },
       ],
       extractedTextLength,
@@ -490,21 +492,22 @@ function parseJsonObjectFromText(text: string): unknown {
 }
 
 export async function checkComplianceEksEtks(payload: InstructionPayload): Promise<ComplianceReport> {
-  const apiKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
-  const pplxKey = (process.env.PERPLEXITY_API_KEY ?? "").trim();
+  const resolved = await getResolvedApiConfig();
+  const apiKey = resolved.openrouterApiKey;
+  const model = resolved.openrouterModel;
+  const pplxKey = resolved.perplexityApiKey;
 
   if (!apiKey) {
     return {
       ok: false,
-      issues: [{ section: "general", severity: "warning", message: "Нет OPENROUTER_API_KEY — проверка соответствия недоступна." }],
+      issues: [{ section: "general", severity: "warning", message: "Нет ключа DeepSeek — проверка соответствия недоступна." }],
     };
   }
   if (!pplxKey) {
     return {
       ok: false,
-      issues: [{ section: "general", severity: "warning", message: "Нет PERPLEXITY_API_KEY (Sonar) — проверка соответствия ЕКС/ЕТКС ограничена." }],
-      note: "Можно включить PERPLEXITY_API_KEY, чтобы подтягивать нормативно-ориентированные выдержки.",
+      issues: [{ section: "general", severity: "warning", message: "Нет ключа Perplexity (Sonar) — проверка соответствия ЕКС/ЕТКС ограничена." }],
+      note: "Задайте ключ Perplexity в разделе «Настройки API», чтобы подтягивать нормативно-ориентированные выдержки.",
     };
   }
 
@@ -512,7 +515,7 @@ export async function checkComplianceEksEtks(payload: InstructionPayload): Promi
   const department = payload.templateMeta.departmentName;
 
   // Pull “normative-oriented” snippets via Sonar for key areas.
-  let sonarModel = process.env.PERPLEXITY_MODEL || "sonar-pro";
+  let sonarModel = resolved.perplexityModel;
   const [qual, mustKnow, duties] = await Promise.all([
     fetchPerplexityFactsForSection({
       jobTitle,

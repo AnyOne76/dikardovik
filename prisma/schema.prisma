@@ -80,6 +80,21 @@ model AppSettings {
   perplexityApiKey   String   @default("")
   openrouterApiKey   String   @default("")
   perplexityModel    String   @default("sonar-pro")
-  openrouterModel    String   @default("openai/gpt-4o-mini")
+  openrouterModel    String   @default("deepseek-v4-flash")
   updatedAt          DateTime @updatedAt
+}
+
+/// Генеральные директора по юрлицам. Текущий (isCurrent) подставляется в блок
+/// "УТВЕРЖДАЮ" при экспорте ДИ. Прежние директора остаются в списке, чтобы при
+/// смене руководителя можно было вернуться к предыдущему без правки кода.
+model Director {
+  id            String   @id @default(cuid())
+  legalEntityId String
+  fullName      String
+  isCurrent     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([legalEntityId, fullName])
+  @@index([legalEntityId, isCurrent])
 }

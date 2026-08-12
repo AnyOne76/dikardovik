@@ -19,6 +19,7 @@ import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
 import { getResolvedApiConfig } from "@/lib/api-settings";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
 import { getLegalEntity, type LegalEntity } from "@/lib/legal-entities";
+import { getCurrentDirectorName } from "@/lib/directors";
 import {
   capitalizeListItems,
   ensureResponsibilityItems,
@@ -390,6 +391,7 @@ export async function exportInstructionToDocx(payload: InstructionPayload): Prom
   const resolved = await getResolvedApiConfig();
   const safePayload = await applyTripleTextQuality(payload, { resolvedApi: resolved });
   const entity = getLegalEntity(safePayload.templateMeta.legalEntityId);
+  const directorName = await getCurrentDirectorName(entity.id);
   const logoData = entity.showBrandMark ? await readFile(LOGO_PATH).catch(() => null) : null;
   const doc = new Document({
     sections: [
@@ -412,7 +414,7 @@ export async function exportInstructionToDocx(payload: InstructionPayload): Prom
         children: [
           para(fixedHeaders.approve, { alignment: AlignmentType.RIGHT, after: 160 }),
           para("Генеральный директор", { alignment: AlignmentType.RIGHT, after: 160 }),
-          para(`___________ ${entity.directorName}`, { alignment: AlignmentType.RIGHT, after: 160 }),
+          para(`___________ ${directorName}`, { alignment: AlignmentType.RIGHT, after: 160 }),
           para("«____» ___________________ 20__г.", { alignment: AlignmentType.RIGHT, after: 280 }),
           para(fixedHeaders.title, { bold: true, alignment: AlignmentType.CENTER, size: 28, after: 160 }),
           new Table({
