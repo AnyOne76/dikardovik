@@ -1,13 +1,30 @@
 @import "tailwindcss";
 
+/*
+ * Строгая корпоративная палитра: нейтральный светлый фон, белые карточки,
+ * фирменный оранжевый — только как акцент (главное действие, активный пункт
+ * меню, ссылки). Документ должен читаться как документ, а не как витрина.
+ */
 :root {
-  --background: #fffaf5;
-  --foreground: #1f2937;
+  --background: #f6f7f9;
+  --surface: #ffffff;
+  --foreground: #16181d;
+  --muted: #5c6370;
+  --border: #e3e6ea;
+  --accent: #d1600f;
+  --accent-strong: #b8500a;
+  --accent-soft: #fdf3ec;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -17,4 +34,19 @@ body {
   color: var(--foreground);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;
+}
+
+/* Полоса прокрутки присутствует всегда: иначе страницы без прокрутки шире
+   страниц с ней, и переход между ними сдвигает всю вёрстку по горизонтали. */
+html {
+  scrollbar-gutter: stable;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

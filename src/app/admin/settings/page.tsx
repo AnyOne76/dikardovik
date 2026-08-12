@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { LEGAL_ENTITIES } from "@/lib/legal-entities";
+import {
+  Button,
+  Card,
+  CardTitle,
+  EmptyState,
+  Field,
+  Input,
+  Notice,
+  Page,
+  PageHeader,
+} from "@/components/ui";
 
 type DirectorRecord = {
   id: string;
@@ -11,8 +22,14 @@ type DirectorRecord = {
   isCurrent: boolean;
 };
 
-const inputClass =
-  "w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none";
+type SettingsResponse = {
+  perplexityModel: string;
+  openrouterModel: string;
+  perplexityConfigured: boolean;
+  perplexityKeyMask: string | null;
+  openrouterConfigured: boolean;
+  openrouterKeyMask: string | null;
+};
 
 /**
  * Справочник генеральных директоров: по каждому юрлицу можно добавить нового
@@ -66,17 +83,19 @@ function DirectorsCard() {
   }
 
   return (
-    <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-      <h2 className="text-lg font-semibold text-orange-700">Генеральные директора</h2>
-      <p className="mt-1 text-xs text-zinc-500">
-        ФИО действующего директора подставляется в блок «УТВЕРЖДАЮ» при выгрузке ДИ в DOCX. При смене
-        руководителя добавьте нового — прежний останется в списке, к нему можно вернуться.
-      </p>
+    <Card>
+      <CardTitle hint="ФИО действующего директора подставляется в блок «УТВЕРЖДАЮ» при выгрузке в DOCX. При смене руководителя добавьте нового — прежний останется в списке.">
+        Генеральные директора
+      </CardTitle>
 
       {loading ? (
-        <div className="mt-4 text-sm text-zinc-500">Загрузка...</div>
+        <div className="space-y-3">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-28 animate-pulse rounded-lg border border-[var(--border)]" />
+          ))}
+        </div>
       ) : (
-        <div className="mt-4 space-y-5">
+        <div className="space-y-4">
           {LEGAL_ENTITIES.map((entity) => {
             const forEntity = rows.filter((r) => r.legalEntityId === entity.id);
             const current = forEntity.find((r) => r.isCurrent);
@@ -84,49 +103,46 @@ function DirectorsCard() {
             const draft = drafts[entity.id] ?? "";
 
             return (
-              <div key={entity.id} className="rounded-xl border border-zinc-100 p-4">
-                <div className="text-sm font-medium text-zinc-800">{entity.label}</div>
-                <div className="mt-1 text-sm text-zinc-600">
-                  Действующий:{" "}
-                  <span className="font-medium text-zinc-900">{current?.fullName ?? "не задан"}</span>
-                </div>
+              <div key={entity.id} className="rounded-lg border border-[var(--border)] p-4">
+                <p className="text-sm font-medium">{entity.label}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Действующий: <span className="font-medium text-[var(--foreground)]">{current?.fullName ?? "не задан"}</span>
+                </p>
 
                 {previous.length > 0 && (
-                  <div className="mt-3 space-y-1.5">
-                    <div className="text-xs text-zinc-500">Прежние директора</div>
+                  <ul className="mt-3 space-y-1.5 border-t border-[var(--border)] pt-3">
                     {previous.map((r) => (
-                      <div key={r.id} className="flex items-center gap-2 text-sm">
-                        <span className="text-zinc-700">{r.fullName}</span>
+                      <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <span className="text-[var(--muted)]">{r.fullName}</span>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => void send("PATCH", { id: r.id }, `Действующий директор: ${r.fullName}`)}
-                          className="text-orange-700 underline underline-offset-2 disabled:opacity-50"
+                          className="text-[var(--accent-strong)] underline underline-offset-2 disabled:opacity-50"
                         >
-                          сделать текущим
+                          назначить текущим
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => void send("DELETE", { id: r.id }, "Директор удалён из списка")}
-                          className="text-zinc-400 underline underline-offset-2 hover:text-red-600 disabled:opacity-50"
+                          className="text-[var(--muted)] underline underline-offset-2 hover:text-red-700 disabled:opacity-50"
                         >
                           удалить
                         </button>
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
 
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <input
-                    className={inputClass}
-                    placeholder="Новый директор, например Иванов И.И."
+                  <Input
+                    placeholder="Новый директор — Иванов Иван Иванович"
                     value={draft}
                     onChange={(e) => setDrafts((prev) => ({ ...prev, [entity.id]: e.target.value }))}
                   />
-                  <button
-                    type="button"
+                  <Button
+                    className="shrink-0"
                     disabled={busy || draft.trim().length < 3}
                     onClick={async () => {
                       await send(
@@ -136,10 +152,9 @@ function DirectorsCard() {
                       );
                       setDrafts((prev) => ({ ...prev, [entity.id]: "" }));
                     }}
-                    className="h-11 shrink-0 rounded-xl border border-orange-200 px-4 text-sm font-medium text-orange-700 transition hover:bg-orange-50 disabled:opacity-50"
                   >
                     Добавить и назначить
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
@@ -147,20 +162,19 @@ function DirectorsCard() {
         </div>
       )}
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {ok && <p className="mt-3 text-sm text-green-700">{ok}</p>}
-    </div>
+      {error && (
+        <div className="mt-4">
+          <Notice tone="error">{error}</Notice>
+        </div>
+      )}
+      {ok && (
+        <div className="mt-4">
+          <Notice tone="success">{ok}</Notice>
+        </div>
+      )}
+    </Card>
   );
 }
-
-type SettingsResponse = {
-  perplexityModel: string;
-  openrouterModel: string;
-  perplexityConfigured: boolean;
-  perplexityKeyMask: string | null;
-  openrouterConfigured: boolean;
-  openrouterKeyMask: string | null;
-};
 
 export default function AdminSettingsPage() {
   const { data: session } = useSession();
@@ -240,110 +254,114 @@ export default function AdminSettingsPage() {
     }
   }
 
+  if (role !== "admin") {
+    return (
+      <Page width="narrow">
+        <PageHeader title="Настройки" />
+        <EmptyState>Доступ разрешён только администраторам.</EmptyState>
+      </Page>
+    );
+  }
+
   return (
-    <main className="mx-auto max-w-2xl p-6 text-zinc-900">
-      <h1 className="text-2xl font-semibold text-orange-700">Настройки API</h1>
-      <p className="mt-1 text-sm text-zinc-600">
-        Ключи Perplexity и DeepSeek хранятся в базе. Пустое поле ключа при сохранении не меняет уже сохранённый
-        ключ. Если ключ не задан в базе, используются переменные окружения.
-      </p>
+    <Page width="narrow">
+      <PageHeader
+        title="Настройки"
+        subtitle="Ключи хранятся в базе и имеют приоритет над переменными окружения. Пустое поле ключа при сохранении оставляет прежний."
+      />
 
-      {role !== "admin" ? (
-        <div className="mt-6 rounded-2xl border border-orange-100 bg-white p-5 text-sm text-zinc-700">
-          Доступ запрещён.
+      {loading ? (
+        <div className="space-y-6">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-56 animate-pulse rounded-xl border border-[var(--border)] bg-white" />
+          ))}
         </div>
-      ) : loading ? (
-        <div className="mt-6 text-sm text-zinc-500">Загрузка...</div>
       ) : (
-        <div className="mt-6 space-y-6">
-          <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-            <h2 className="text-lg font-semibold text-orange-700">Perplexity</h2>
-            {masks.px && (
-              <p className="mt-2 text-sm text-zinc-600">
-                Текущий ключ в БД: <span className="font-mono text-zinc-800">{masks.px}</span>
-              </p>
-            )}
-            <label className="mb-1 mt-3 block text-sm font-medium text-zinc-700">Модель</label>
-            <input
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-              value={perplexityModel}
-              onChange={(e) => setPerplexityModel(e.target.value)}
-            />
-            <label className="mb-1 mt-3 block text-sm font-medium text-zinc-700">Новый API-ключ (оставьте пустым, чтобы не менять)</label>
-            <input
-              type="password"
-              autoComplete="off"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-              value={perplexityKey}
-              onChange={(e) => setPerplexityKey(e.target.value)}
-              disabled={clearPerplexityKey}
-            />
-            <label className="mt-3 flex items-center gap-2 text-sm text-zinc-700">
-              <input
-                type="checkbox"
-                checked={clearPerplexityKey}
-                onChange={(e) => {
-                  setClearPerplexityKey(e.target.checked);
-                  if (e.target.checked) setPerplexityKey("");
-                }}
-              />
-              Удалить ключ Perplexity из базы (будет использован .env при наличии)
-            </label>
+        <div className="space-y-6">
+          <Card>
+            <CardTitle hint="Ключ с сайта api-docs.deepseek.com. Модель: «deepseek-v4-flash» — быстрее, «deepseek-v4-pro» — точнее.">
+              DeepSeek
+            </CardTitle>
+            <div className="space-y-4">
+              {masks.or && (
+                <p className="text-sm text-[var(--muted)]">
+                  Текущий ключ: <span className="font-mono text-[var(--foreground)]">{masks.or}</span>
+                </p>
+              )}
+              <Field label="Модель">
+                <Input value={openrouterModel} onChange={(e) => setOpenrouterModel(e.target.value)} />
+              </Field>
+              <Field label="Новый ключ" hint="Оставьте пустым, чтобы не менять.">
+                <Input
+                  type="password"
+                  autoComplete="off"
+                  value={openrouterKey}
+                  onChange={(e) => setOpenrouterKey(e.target.value)}
+                  disabled={clearOpenrouterKey}
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-zinc-300 accent-[var(--accent)]"
+                  checked={clearOpenrouterKey}
+                  onChange={(e) => {
+                    setClearOpenrouterKey(e.target.checked);
+                    if (e.target.checked) setOpenrouterKey("");
+                  }}
+                />
+                Удалить ключ из базы (будет использован .env)
+              </label>
+            </div>
+          </Card>
+
+          <Card>
+            <CardTitle hint="Используется для подбора нормативных выдержек при проверке ДИ.">Perplexity</CardTitle>
+            <div className="space-y-4">
+              {masks.px && (
+                <p className="text-sm text-[var(--muted)]">
+                  Текущий ключ: <span className="font-mono text-[var(--foreground)]">{masks.px}</span>
+                </p>
+              )}
+              <Field label="Модель">
+                <Input value={perplexityModel} onChange={(e) => setPerplexityModel(e.target.value)} />
+              </Field>
+              <Field label="Новый ключ" hint="Оставьте пустым, чтобы не менять.">
+                <Input
+                  type="password"
+                  autoComplete="off"
+                  value={perplexityKey}
+                  onChange={(e) => setPerplexityKey(e.target.value)}
+                  disabled={clearPerplexityKey}
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-zinc-300 accent-[var(--accent)]"
+                  checked={clearPerplexityKey}
+                  onChange={(e) => {
+                    setClearPerplexityKey(e.target.checked);
+                    if (e.target.checked) setPerplexityKey("");
+                  }}
+                />
+                Удалить ключ из базы (будет использован .env)
+              </label>
+            </div>
+          </Card>
+
+          {error && <Notice tone="error">{error}</Notice>}
+          {ok && <Notice tone="success">{ok}</Notice>}
+
+          <div>
+            <Button variant="primary" loading={busy} onClick={save}>
+              Сохранить ключи
+            </Button>
           </div>
-
-          <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-            <h2 className="text-lg font-semibold text-orange-700">DeepSeek</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Ключ с сайта api-docs.deepseek.com. Модель: например «deepseek-v4-flash» (быстрее) или «deepseek-v4-pro» (точнее).
-            </p>
-            {masks.or && (
-              <p className="mt-2 text-sm text-zinc-600">
-                Текущий ключ в БД: <span className="font-mono text-zinc-800">{masks.or}</span>
-              </p>
-            )}
-            <label className="mb-1 mt-3 block text-sm font-medium text-zinc-700">Модель</label>
-            <input
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-              value={openrouterModel}
-              onChange={(e) => setOpenrouterModel(e.target.value)}
-            />
-            <label className="mb-1 mt-3 block text-sm font-medium text-zinc-700">Новый API-ключ (оставьте пустым, чтобы не менять)</label>
-            <input
-              type="password"
-              autoComplete="off"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-              value={openrouterKey}
-              onChange={(e) => setOpenrouterKey(e.target.value)}
-              disabled={clearOpenrouterKey}
-            />
-            <label className="mt-3 flex items-center gap-2 text-sm text-zinc-700">
-              <input
-                type="checkbox"
-                checked={clearOpenrouterKey}
-                onChange={(e) => {
-                  setClearOpenrouterKey(e.target.checked);
-                  if (e.target.checked) setOpenrouterKey("");
-                }}
-              />
-              Удалить ключ DeepSeek из базы (будет использован .env при наличии)
-            </label>
-          </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {ok && <p className="text-sm text-green-700">{ok}</p>}
-
-          <button
-            type="button"
-            disabled={busy}
-            onClick={save}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 font-medium text-white transition hover:brightness-105 disabled:opacity-50"
-          >
-            {busy ? "Сохранение..." : "Сохранить"}
-          </button>
 
           <DirectorsCard />
         </div>
       )}
-    </main>
+    </Page>
   );
 }

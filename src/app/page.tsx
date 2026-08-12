@@ -3,6 +3,20 @@
 import { useMemo, useState } from "react";
 import { getFinalNoteLines } from "@/lib/di-rules";
 import { DEFAULT_LEGAL_ENTITY_ID, LEGAL_ENTITIES, getLegalEntity } from "@/lib/legal-entities";
+import {
+  Badge,
+  Button,
+  Card,
+  CardTitle,
+  Field,
+  Input,
+  LinkButton,
+  Notice,
+  Page,
+  PageHeader,
+  Select,
+  Spinner,
+} from "@/components/ui";
 
 type GenerateResponse = {
   id: string;
@@ -32,23 +46,49 @@ type GenerateResponse = {
   };
 };
 
-function NumberedList({ items }: { items: string[] }) {
+function DocRow({ label, items }: { label: string; items: string[] }) {
   return (
-    <ol className="list-decimal space-y-1.5 pl-5 text-zinc-700">
-      {items.map((item, idx) => (
-        <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
-      ))}
-    </ol>
+    <tr className="align-top">
+      <th
+        scope="row"
+        className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium text-[var(--foreground)]"
+      >
+        {label}
+      </th>
+      <td className="border-b border-[var(--border)] px-4 py-3">
+        <ol className="list-decimal space-y-1.5 pl-5 text-[var(--foreground)]">
+          {items.map((item, idx) => (
+            <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
+          ))}
+        </ol>
+      </td>
+    </tr>
   );
 }
 
-function LabelRow({ label, items }: { label: string; items: string[] }) {
+function DocSection({ title }: { title: string }) {
+  return (
+    <tr>
+      <td
+        colSpan={2}
+        className="border-y border-[var(--border)] bg-[var(--accent-soft)] px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-[var(--accent-strong)]"
+      >
+        {title}
+      </td>
+    </tr>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
   return (
     <tr className="align-top">
-      <td className="w-[34%] border border-orange-100 bg-orange-50/70 p-3 font-medium text-zinc-800">{label}</td>
-      <td className="border border-orange-100 bg-white p-3">
-        <NumberedList items={items} />
-      </td>
+      <th
+        scope="row"
+        className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium text-[var(--foreground)]"
+      >
+        {label}
+      </th>
+      <td className="border-b border-[var(--border)] px-4 py-3">{value}</td>
     </tr>
   );
 }
@@ -69,8 +109,8 @@ export default function HomePage() {
     if (department === "__custom__" && customDepartment.trim().length <= 2) return false;
     return true;
   }, [jobTitle, loading, department, customDepartment]);
-  const selectedDepartment =
-    department === "__custom__" ? customDepartment.trim() : department;
+
+  const selectedDepartment = department === "__custom__" ? customDepartment.trim() : department;
 
   function handleLegalEntityChange(nextId: string) {
     const nextEntity = getLegalEntity(nextId);
@@ -99,193 +139,164 @@ export default function HomePage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl p-6 text-zinc-900">
-      <section className="rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
-              Генератор должностных инструкций
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-zinc-600">ООО МПЗ Мясницкий Ряд</p>
-          </div>
-          <a
-            className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-700 transition hover:-translate-y-0.5 hover:bg-orange-50"
-            href="/history"
-          >
-            История генераций
-          </a>
-        </div>
-      </section>
+    <Page>
+      <PageHeader
+        title="Должностная инструкция"
+        subtitle="Заполните три поля — документ будет собран по корпоративному шаблону."
+      />
 
-      <div className="mt-6 grid gap-4 rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-zinc-900">Параметры генерации</h2>
-          <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-700">
-            Шаблон фиксирован
-          </span>
-        </div>
-        <input
-          className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 placeholder:text-zinc-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-          placeholder="Введите должность/специальность"
-          value={jobTitle}
-          onChange={(e) => setJobTitle(e.target.value)}
-        />
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-500">Юридическое лицо</label>
-          <select
-            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-            value={legalEntityId}
-            onChange={(e) => handleLegalEntityChange(e.target.value)}
-          >
-            {LEGAL_ENTITIES.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <select
-          className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-        >
-          {entity.departments.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-          <option value="__custom__">Другое (ввести вручную)</option>
-        </select>
-        {department === "__custom__" && (
-          <input
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 placeholder:text-zinc-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-            placeholder="Введите новое структурное подразделение"
-            value={customDepartment}
-            onChange={(e) => setCustomDepartment(e.target.value)}
-          />
-        )}
-        <button
-          disabled={!canSubmit}
-          onClick={generate}
-          className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 font-medium text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Генерация..." : "Сформировать DI"}
-        </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-      </div>
-      {result && (
-        <section className="mt-6 rounded-2xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-zinc-900">
-              Документ сформирован <span className="text-orange-700"># {result.version}</span>
-            </h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-100"
-                href={`/api/di/export/${result.id}`}
-              >
-                Экспорт DOCX
-              </a>
-              <a
-                className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-50"
-                href={`/history/${result.id}/edit`}
-              >
-                Открыть в редакторе
-              </a>
-            </div>
-          </div>
-          <div className="mt-4 overflow-x-auto rounded-xl border border-orange-100">
-            <table className="w-full border-collapse text-sm">
-              <tbody>
-                <tr>
-                  <td className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-3 text-center text-base font-bold tracking-[0.3em] text-zinc-800" colSpan={2}>
-                    ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
-                  </td>
-                </tr>
-                <tr className="align-top">
-                  <td className="w-[34%] border border-orange-100 bg-orange-50/70 p-3 font-medium">
-                    Юридическое лицо
-                  </td>
-                  <td className="border border-orange-100 p-3">
-                    {getLegalEntity(result.payload.templateMeta.legalEntityId).label}
-                  </td>
-                </tr>
-                <tr className="align-top">
-                  <td className="w-[34%] border border-orange-100 bg-orange-50/70 p-3 font-medium">
-                    Название штатной должности
-                  </td>
-                  <td className="border border-orange-100 p-3">{result.payload.templateMeta.positionName}</td>
-                </tr>
-                <tr className="align-top">
-                  <td className="border border-orange-100 bg-orange-50/70 p-3 font-medium">
-                    Наименование структурного подразделения
-                  </td>
-                  <td className="border border-orange-100 p-3">{result.payload.templateMeta.departmentName}</td>
-                </tr>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
+        <Card>
+          <CardTitle hint="Шаблон и структура разделов фиксированы.">Параметры</CardTitle>
 
-                <tr>
-                  <td className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-2.5 text-center font-bold text-zinc-800" colSpan={2}>
-                    {result.payload.sections.general.heading}
-                  </td>
-                </tr>
-                <LabelRow
-                  label="Требуемая квалификация и стаж работы по данной должности"
-                  items={result.payload.sections.general.requiredQualification}
-                />
-                <LabelRow label="Подчиненность" items={result.payload.sections.general.subordination} />
-                <LabelRow label="Прием на работу" items={result.payload.sections.general.hiringProcedure} />
-                <LabelRow
-                  label="Замещение на время отсутствия"
-                  items={result.payload.sections.general.substitutionProcedure}
-                />
-                <LabelRow
-                  label="Нормативные документы, которыми руководствуется в своей деятельности"
-                  items={result.payload.sections.general.regulatoryDocuments}
-                />
-                <LabelRow
-                  label="Локально-нормативные акты"
-                  items={result.payload.sections.general.localRegulations}
-                />
-                <LabelRow
-                  label="Работник должен знать"
-                  items={result.payload.sections.general.employeeMustKnow}
-                />
+          <div className="space-y-4">
+            <Field label="Должность или специальность">
+              <Input
+                placeholder="Например: системный аналитик"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+              />
+            </Field>
 
-                <tr>
-                  <td className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-2.5 text-center font-bold text-zinc-800" colSpan={2}>
-                    {result.payload.sections.duties.heading}
-                  </td>
-                </tr>
-                <LabelRow label="Работник обязан" items={result.payload.sections.duties.items} />
+            <Field label="Юридическое лицо">
+              <Select value={legalEntityId} onChange={(e) => handleLegalEntityChange(e.target.value)}>
+                {LEGAL_ENTITIES.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-                <tr>
-                  <td className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-2.5 text-center font-bold text-zinc-800" colSpan={2}>
-                    {result.payload.sections.rights.heading}
-                  </td>
-                </tr>
-                <LabelRow label="Работник имеет право" items={result.payload.sections.rights.items} />
+            <Field label="Структурное подразделение">
+              <Select value={department} onChange={(e) => setDepartment(e.target.value)}>
+                {entity.departments.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+                <option value="__custom__">Другое (ввести вручную)</option>
+              </Select>
+            </Field>
 
-                <tr>
-                  <td className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-2.5 text-center font-bold text-zinc-800" colSpan={2}>
-                    {result.payload.sections.responsibility.heading}
-                  </td>
-                </tr>
-                <LabelRow
-                  label="Работник несет ответственность за"
-                  items={result.payload.sections.responsibility.items}
-                />
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4 text-sm text-zinc-700">
-            {getFinalNoteLines(result.payload.templateMeta.positionName).map((line, idx) => (
-              <p key={`${idx}-${line.slice(0, 20)}`} className={idx > 0 ? "mt-2" : ""}>
-                {line}
+            {department === "__custom__" && (
+              <Input
+                placeholder="Название подразделения"
+                value={customDepartment}
+                onChange={(e) => setCustomDepartment(e.target.value)}
+              />
+            )}
+
+            <Button variant="primary" className="w-full" disabled={!canSubmit} loading={loading} onClick={generate}>
+              {loading ? "Формируем документ..." : "Сформировать ДИ"}
+            </Button>
+
+            {loading && (
+              <p className="text-center text-xs text-[var(--muted)]">
+                Обычно занимает от 30 секунд до полутора минут. Не закрывайте страницу.
               </p>
-            ))}
+            )}
+            {error && <Notice tone="error">{error}</Notice>}
           </div>
-        </section>
-      )}
-    </main>
+        </Card>
+
+        <div className="min-w-0">
+          {!result && !loading && (
+            <Card className="flex min-h-70 items-center justify-center text-center">
+              <p className="max-w-sm text-sm text-[var(--muted)]">
+                Готовый документ появится здесь. Его можно будет скачать в DOCX или открыть в редакторе для правок
+                по разделам.
+              </p>
+            </Card>
+          )}
+
+          {loading && (
+            <Card className="flex min-h-70 flex-col items-center justify-center gap-3 text-center">
+              <Spinner className="size-6 text-[var(--accent)]" />
+              <p className="text-sm text-[var(--muted)]">Собираем разделы и вычитываем формулировки...</p>
+            </Card>
+          )}
+
+          {result && !loading && (
+            <Card className="p-0">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-5">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-base font-semibold">Документ сформирован</h2>
+                  <Badge tone="accent">версия {result.version}</Badge>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <LinkButton href={`/api/di/export/${result.id}`} variant="primary" size="sm">
+                    Скачать DOCX
+                  </LinkButton>
+                  <LinkButton href={`/history/${result.id}/edit`} size="sm">
+                    Открыть в редакторе
+                  </LinkButton>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <caption className="border-b border-[var(--border)] px-4 py-3 text-center text-sm font-semibold tracking-[0.2em] text-[var(--foreground)]">
+                    ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
+                  </caption>
+                  <tbody>
+                    <MetaRow
+                      label="Юридическое лицо"
+                      value={getLegalEntity(result.payload.templateMeta.legalEntityId).label}
+                    />
+                    <MetaRow label="Название штатной должности" value={result.payload.templateMeta.positionName} />
+                    <MetaRow
+                      label="Наименование структурного подразделения"
+                      value={result.payload.templateMeta.departmentName}
+                    />
+
+                    <DocSection title={result.payload.sections.general.heading} />
+                    <DocRow
+                      label="Требуемая квалификация и стаж работы по данной должности"
+                      items={result.payload.sections.general.requiredQualification}
+                    />
+                    <DocRow label="Подчиненность" items={result.payload.sections.general.subordination} />
+                    <DocRow label="Прием на работу" items={result.payload.sections.general.hiringProcedure} />
+                    <DocRow
+                      label="Замещение на время отсутствия"
+                      items={result.payload.sections.general.substitutionProcedure}
+                    />
+                    <DocRow
+                      label="Нормативные документы, которыми руководствуется в своей деятельности"
+                      items={result.payload.sections.general.regulatoryDocuments}
+                    />
+                    <DocRow
+                      label="Локально-нормативные акты"
+                      items={result.payload.sections.general.localRegulations}
+                    />
+                    <DocRow label="Работник должен знать" items={result.payload.sections.general.employeeMustKnow} />
+
+                    <DocSection title={result.payload.sections.duties.heading} />
+                    <DocRow label="Работник обязан" items={result.payload.sections.duties.items} />
+
+                    <DocSection title={result.payload.sections.rights.heading} />
+                    <DocRow label="Работник имеет право" items={result.payload.sections.rights.items} />
+
+                    <DocSection title={result.payload.sections.responsibility.heading} />
+                    <DocRow
+                      label="Работник несет ответственность за"
+                      items={result.payload.sections.responsibility.items}
+                    />
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="border-t border-[var(--border)] bg-[var(--background)] p-5 text-sm text-[var(--muted)]">
+                {getFinalNoteLines(result.payload.templateMeta.positionName).map((line, idx) => (
+                  <p key={`${idx}-${line.slice(0, 20)}`} className={idx > 0 ? "mt-2" : ""}>
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+    </Page>
   );
 }

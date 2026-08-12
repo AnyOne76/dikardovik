@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { instructionSchema } from "@/lib/di-contract";
 import { listInstructionPayloadChanges, type InstructionFieldChange } from "@/lib/di-payload-diff";
+import { Button, Card, CardTitle, Notice, Page, PageHeader } from "@/components/ui";
 
 type AnalyzeIssue = { code: string; message: string; path?: string };
 
@@ -94,297 +95,272 @@ export default function AnalyzePage() {
     }
   }
 
-  return (
-    <main className="mx-auto flex max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Проверка готовой должностной инструкции</h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          Загрузите документ Word в формате <strong>.docx</strong> или <strong>.doc</strong>. Для старых файлов текст
-          извлекается на сервере; при странных артефактах пересохраните документ в Word как .docx и загрузите снова.
-        </p>
-      </div>
+  async function importToEditor() {
+    if (!result) return;
+    setImporting(true);
+    setError(null);
+    try {
+      const r = await fetch("/api/di/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ templateJson: result.payload }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof data?.error === "string" ? data.error : "Ошибка импорта");
+      router.push(`/history/${data.id}/edit`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка импорта");
+    } finally {
+      setImporting(false);
+    }
+  }
 
-      <form onSubmit={onSubmit} className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm">
-        <label className="block text-sm font-medium text-zinc-800">
-          Файл Word (.doc / .docx)
+  async function improve() {
+    if (!result) return;
+    setImproving(true);
+    setError(null);
+    setImproveHint(null);
+    setImproveDiff([]);
+    const beforeParsed = instructionSchema.parse(JSON.parse(JSON.stringify(result.payload)));
+    try {
+      let r: Response;
+      if (file && file.size > 0) {
+        const form = new FormData();
+        form.set("templateJson", JSON.stringify(result.payload));
+        form.set("analyzeIssues", JSON.stringify(result.issues));
+        if (result.compliance) form.set("compliance", JSON.stringify(result.compliance));
+        form.set("file", file);
+        r = await fetch("/api/di/improve", { method: "POST", body: form, credentials: "include" });
+      } else {
+        r = await fetch("/api/di/improve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            templateJson: result.payload,
+            analyzeIssues: result.issues,
+            compliance: result.compliance,
+          }),
+        });
+      }
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof data?.error === "string" ? data.error : "Ошибка доработки");
+
+      const payload = data.payload as AnalyzeResponse["payload"];
+      const printablePreview = data.printablePreview as string | undefined;
+      const model = data.model as string | undefined;
+      setResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              ok: true,
+              payload,
+              printablePreview: printablePreview ?? prev.printablePreview,
+              model: model ?? prev.model,
+              issues: [],
+              compliance: undefined,
+              verifyNote:
+                file && file.size > 0
+                  ? "Список замечаний очищен. Доработка выполнялась с текстом загруженного Word. Для новой сверки и ЕКС/ЕТКС нажмите «Проверить» в форме выше (тот же файл можно оставить)."
+                  : "Список замечаний очищен. Файл в форме не был выбран — в доработку не попал исходный текст, замечания сверки могут повториться. Выберите тот же .doc/.docx и снова нажмите «Проверить», затем при необходимости «Доработать».",
+            }
+          : prev,
+      );
+      const afterParsed = instructionSchema.parse(JSON.parse(JSON.stringify(payload)));
+      setImproveDiff(listInstructionPayloadChanges(beforeParsed, afterParsed));
+      setImproveHint(
+        "Текст инструкции обновлён с учётом замечаний. Смотрите «Что изменилось после доработки»; для повторной проверки нажмите «Проверить» в форме выше или откройте в редакторе.",
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка доработки");
+    } finally {
+      setImproving(false);
+    }
+  }
+
+  async function downloadDraft() {
+    if (!result || result.payload == null) return;
+    setExporting(true);
+    setError(null);
+    try {
+      const r = await fetch("/api/di/export-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ templateJson: result.payload }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        const msg =
+          typeof data?.message === "string"
+            ? data.message
+            : typeof data?.error === "string"
+              ? data.error
+              : `Ошибка ${r.status}`;
+        throw new Error(msg);
+      }
+      const blob = await r.blob();
+      let filename = "instrukciya_proverka.docx";
+      const cd = r.headers.get("Content-Disposition");
+      const m = cd?.match(/filename\*=UTF-8''([^;\s]+)/);
+      if (m?.[1]) {
+        try {
+          filename = decodeURIComponent(m[1]);
+        } catch {
+          filename = m[1];
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось скачать DOCX.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const hasRemarks =
+    result != null &&
+    (result.issues.length > 0 ||
+      (result.compliance?.issues?.length ?? 0) > 0 ||
+      Boolean(result.compliance?.note?.trim()));
+
+  return (
+    <Page width="narrow">
+      <PageHeader
+        title="Проверка инструкции"
+        subtitle="Загрузите готовый документ Word — сервис разберёт его по шаблону и покажет замечания."
+      />
+
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardTitle hint="Для старых .doc текст извлекается на сервере. Если попадаются артефакты, пересохраните файл в Word как .docx.">
+            Документ
+          </CardTitle>
+
           <input
             type="file"
             accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="mt-2 block w-full text-sm text-zinc-700 file:mr-4 file:rounded-lg file:border-0 file:bg-orange-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-orange-800 hover:file:bg-orange-100"
+            className="block w-full cursor-pointer rounded-lg border border-dashed border-[var(--border)] p-3 text-sm text-[var(--muted)] file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-[var(--accent-soft)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[var(--accent-strong)]"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
-        </label>
-        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-800">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-orange-600"
-            checked={checkCompliance}
-            onChange={(e) => setCheckCompliance(e.target.checked)}
-          />
-          Проверить соответствие ЕКС/ЕТКС (может занять до 1 минуты)
-        </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-4 inline-flex h-10 items-center rounded-xl bg-orange-600 px-5 text-sm font-medium text-white transition hover:bg-orange-700 disabled:opacity-60"
-        >
-          {loading ? "Проверка…" : "Проверить"}
-        </button>
+
+          <label className="mt-4 flex items-center gap-2 text-sm text-[var(--muted)]">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-zinc-300 accent-[var(--accent)]"
+              checked={checkCompliance}
+              onChange={(e) => setCheckCompliance(e.target.checked)}
+            />
+            Проверить соответствие ЕКС/ЕТКС (до минуты дольше)
+          </label>
+
+          <div className="mt-4">
+            <Button type="submit" variant="primary" loading={loading}>
+              Проверить
+            </Button>
+          </div>
+        </Card>
       </form>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
-          {error}
+        <div className="mt-6">
+          <Notice tone="error">{error}</Notice>
         </div>
       )}
 
       {result && (
-        <div className="space-y-4">
-          <div
-            className={`rounded-xl border px-4 py-3 text-sm ${
-              result.ok
-                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                : "border-amber-200 bg-amber-50 text-amber-950"
-            }`}
-          >
-            <p className="font-medium">
+        <div className="mt-6 space-y-4">
+          <Notice tone={result.ok ? "success" : "info"}>
+            <span className="font-medium">
               {result.ok
-                ? "Структура соответствует шаблону (заголовки секций и схема данных)."
+                ? "Структура соответствует шаблону."
                 : result.payload != null
-                  ? "Есть замечания по сверке с исходным текстом или структуре. Ниже можно доработать JSON по списку замечаний или открыть в редакторе."
+                  ? "Есть замечания по структуре или сверке с исходным текстом — их можно доработать ниже."
                   : "Есть замечания по структуре или схеме данных (готовый JSON недоступен)."}
-            </p>
-            <p className="mt-1 text-xs opacity-90">
+            </span>
+            <br />
+            <span className="text-xs opacity-80">
               Извлечено символов: {result.extractedTextLength}
-              {result.truncated ? " (текст обрезан до 100 тыс. символов для анализа)" : ""}
+              {result.truncated ? " (обрезано до 100 тыс. для анализа)" : ""}
               {result.model ? ` · модель: ${result.model}` : ""}
-            </p>
-          </div>
+            </span>
+          </Notice>
 
           {result.payload != null && (
-            <div className="space-y-2">
-              {improveHint ? (
-                <p className="text-sm text-emerald-800" role="status">
+            <Card>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="primary" loading={importing} onClick={importToEditor}>
+                  Открыть в редакторе
+                </Button>
+                <Button
+                  loading={improving}
+                  disabled={importing || !hasRemarks}
+                  title={hasRemarks ? undefined : "Сначала нужны замечания: включите проверку ЕКС/ЕТКС и дождитесь анализа"}
+                  onClick={improve}
+                >
+                  Доработать по замечаниям
+                </Button>
+                <Button loading={exporting} disabled={importing || improving} onClick={downloadDraft}>
+                  Скачать DOCX
+                </Button>
+              </div>
+
+              {improveHint && (
+                <p className="mt-3 text-sm text-emerald-800" role="status">
                   {improveHint}
                 </p>
-              ) : null}
-              {improveDiff.length > 0 ? (
-                <details className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-sm">
-                  <summary className="cursor-pointer font-medium text-emerald-900">
+              )}
+
+              {improveDiff.length > 0 && (
+                <details className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--background)] p-3 text-sm">
+                  <summary className="cursor-pointer font-medium">
                     Что изменилось после доработки ({improveDiff.length})
                   </summary>
                   <ul className="mt-2 max-h-80 space-y-3 overflow-y-auto pl-1">
                     {improveDiff.map((ch, idx) => (
-                      <li key={`${ch.path}-${idx}`} className="border-b border-emerald-100 pb-2 last:border-0">
-                        <p className="font-mono text-xs text-emerald-800">{ch.path}</p>
-                        <p className="mt-1 text-xs text-red-800 line-through decoration-red-600/70">{ch.before}</p>
-                        <p className="mt-0.5 text-xs text-emerald-950">{ch.after}</p>
+                      <li key={`${ch.path}-${idx}`} className="border-b border-[var(--border)] pb-2 last:border-0">
+                        <p className="font-mono text-xs text-[var(--muted)]">{ch.path}</p>
+                        <p className="mt-1 text-xs text-red-700 line-through">{ch.before}</p>
+                        <p className="mt-0.5 text-xs text-emerald-800">{ch.after}</p>
                       </li>
                     ))}
                   </ul>
                 </details>
-              ) : null}
-              {result.verifyNote ? (
-                <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700">
-                  {result.verifyNote}
-                </p>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={importing}
-                  className="inline-flex h-10 items-center rounded-xl bg-orange-600 px-5 text-sm font-medium text-white transition hover:bg-orange-700 disabled:opacity-60"
-                  onClick={async () => {
-                    setImporting(true);
-                    setError(null);
-                    try {
-                      const r = await fetch("/api/di/import", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "include",
-                        body: JSON.stringify({ templateJson: result.payload }),
-                      });
-                      const data = await r.json().catch(() => ({}));
-                      if (!r.ok) {
-                        throw new Error(typeof data?.error === "string" ? data.error : "Ошибка импорта");
-                      }
-                      router.push(`/history/${data.id}/edit`);
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : "Ошибка импорта");
-                    } finally {
-                      setImporting(false);
-                    }
-                  }}
-                >
-                  {importing ? "Импорт…" : "Открыть в редакторе"}
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    improving ||
-                    importing ||
-                    !(
-                      result.issues.length > 0 ||
-                      (result.compliance?.issues?.length ?? 0) > 0 ||
-                      Boolean(result.compliance?.note?.trim())
-                    )
-                  }
-                  title={
-                    result.issues.length === 0 &&
-                    (result.compliance?.issues?.length ?? 0) === 0 &&
-                    !result.compliance?.note?.trim()
-                      ? "Сначала нужны замечания: включите проверку ЕКС/ЕТКС и дождитесь анализа"
-                      : undefined
-                  }
-                  className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-5 text-sm font-medium text-orange-900 transition hover:bg-orange-50 disabled:opacity-50"
-                  onClick={async () => {
-                    setImproving(true);
-                    setError(null);
-                    setImproveHint(null);
-                    setImproveDiff([]);
-                    const beforeParsed = instructionSchema.parse(
-                      JSON.parse(JSON.stringify(result.payload)),
-                    );
-                    try {
-                      let r: Response;
-                      if (file && file.size > 0) {
-                        const form = new FormData();
-                        form.set("templateJson", JSON.stringify(result.payload));
-                        form.set("analyzeIssues", JSON.stringify(result.issues));
-                        if (result.compliance) {
-                          form.set("compliance", JSON.stringify(result.compliance));
-                        }
-                        form.set("file", file);
-                        r = await fetch("/api/di/improve", {
-                          method: "POST",
-                          body: form,
-                          credentials: "include",
-                        });
-                      } else {
-                        r = await fetch("/api/di/improve", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          credentials: "include",
-                          body: JSON.stringify({
-                            templateJson: result.payload,
-                            analyzeIssues: result.issues,
-                            compliance: result.compliance,
-                          }),
-                        });
-                      }
-                      const data = await r.json().catch(() => ({}));
-                      if (!r.ok) {
-                        throw new Error(typeof data?.error === "string" ? data.error : "Ошибка доработки");
-                      }
-                      const payload = data.payload as AnalyzeResponse["payload"];
-                      const printablePreview = data.printablePreview as string | undefined;
-                      const model = data.model as string | undefined;
-                      setResult((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              ok: true,
-                              payload,
-                              printablePreview: printablePreview ?? prev.printablePreview,
-                              model: model ?? prev.model,
-                              issues: [],
-                              compliance: undefined,
-                              verifyNote:
-                                file && file.size > 0
-                                  ? "Список замечаний очищен. Доработка выполнялась с текстом загруженного Word. Для новой сверки и ЕКС/ЕТКС нажмите «Проверить» в форме выше (тот же файл можно оставить)."
-                                  : "Список замечаний очищен. Файл в форме не был выбран — в доработку не попал исходный текст, замечания сверки могут повториться. Выберите тот же .doc/.docx и снова нажмите «Проверить», затем при необходимости «Доработать».",
-                            }
-                          : prev,
-                      );
-                      const afterParsed = instructionSchema.parse(JSON.parse(JSON.stringify(payload)));
-                      setImproveDiff(listInstructionPayloadChanges(beforeParsed, afterParsed));
-                      setImproveHint(
-                        "Текст инструкции обновлён с учётом замечаний. Смотрите «Что изменилось после доработки»; для повторной проверки нажмите «Проверить» в форме выше или откройте в редакторе.",
-                      );
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : "Ошибка доработки");
-                    } finally {
-                      setImproving(false);
-                    }
-                  }}
-                >
-                  {improving ? "Доработка…" : "Доработать по замечаниям"}
-                </button>
-                <button
-                  type="button"
-                  disabled={importing || improving || exporting}
-                  className="inline-flex h-10 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-5 text-sm font-medium text-emerald-950 transition hover:bg-emerald-100 disabled:opacity-50"
-                  onClick={async () => {
-                    if (result.payload == null) return;
-                    setExporting(true);
-                    setError(null);
-                    try {
-                      const r = await fetch("/api/di/export-draft", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "include",
-                        body: JSON.stringify({ templateJson: result.payload }),
-                      });
-                      if (!r.ok) {
-                        const data = await r.json().catch(() => null);
-                        const msg =
-                          typeof data?.message === "string"
-                            ? data.message
-                            : typeof data?.error === "string"
-                              ? data.error
-                              : `Ошибка ${r.status}`;
-                        throw new Error(msg);
-                      }
-                      const blob = await r.blob();
-                      let filename = "instrukciya_proverka.docx";
-                      const cd = r.headers.get("Content-Disposition");
-                      const m = cd?.match(/filename\*=UTF-8''([^;\s]+)/);
-                      if (m?.[1]) {
-                        try {
-                          filename = decodeURIComponent(m[1]);
-                        } catch {
-                          filename = m[1];
-                        }
-                      }
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = filename;
-                      a.rel = "noopener";
-                      document.body.appendChild(a);
-                      a.click();
-                      a.remove();
-                      URL.revokeObjectURL(url);
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : "Не удалось скачать DOCX.");
-                    } finally {
-                      setExporting(false);
-                    }
-                  }}
-                >
-                  {exporting ? "Файл…" : "Скачать .docx"}
-                </button>
-              </div>
-              <p className="text-xs text-zinc-600">
-                «Скачать .docx» формирует файл по шаблону приложения из текущего JSON (не копия загрузки). Кнопка «Доработать» отправляет JSON и замечания в модель. Чтобы исправления совпали с повторной проверкой, оставьте в поле выбора тот же Word — его текст уходит в доработку вместе с JSON. Спорные пункты можно сокращать или заменять; после доработки список замечаний сбрасывается, повторный анализ — кнопка «Проверить» в форме выше. Должность и подразделение не меняются.
+              )}
+
+              {result.verifyNote && <p className="mt-3 text-xs text-[var(--muted)]">{result.verifyNote}</p>}
+
+              <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs text-[var(--muted)]">
+                «Скачать DOCX» формирует файл по шаблону приложения из текущего JSON — это не копия загруженного
+                документа. «Доработать» отправляет JSON и замечания в модель; чтобы исправления совпали с повторной
+                проверкой, оставьте в поле тот же файл Word. Должность и подразделение не меняются.
               </p>
-            </div>
+            </Card>
           )}
 
           {result.compliance && (
-            <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+            <Card>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-sm font-semibold text-zinc-900">Соответствие ЕКС/ЕТКС</h2>
-                <p className="text-xs text-zinc-500">
-                  {result.compliance.sonarModel ? `Sonar: ${result.compliance.sonarModel}` : ""}
-                </p>
+                <h2 className="text-sm font-semibold">Соответствие ЕКС/ЕТКС</h2>
+                {result.compliance.sonarModel && (
+                  <p className="text-xs text-[var(--muted)]">Sonar: {result.compliance.sonarModel}</p>
+                )}
               </div>
-              {result.compliance.note ? <p className="mt-2 text-xs text-zinc-600">{result.compliance.note}</p> : null}
+              {result.compliance.note && <p className="mt-2 text-xs text-[var(--muted)]">{result.compliance.note}</p>}
               {result.compliance.issues?.length ? (
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-800">
+                <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm">
                   {result.compliance.issues.map((i, idx) => (
                     <li key={`${i.section}-${idx}`}>
-                      <span className="text-xs font-medium text-zinc-600">
+                      <span className="text-xs font-medium text-[var(--muted)]">
                         {complianceSectionLabel(i.section)} · {severityLabel(i.severity)}:{" "}
                       </span>
                       {i.message}
@@ -392,39 +368,39 @@ export default function AnalyzePage() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-zinc-700">
+                <p className="mt-2 text-sm text-[var(--muted)]">
                   {result.compliance.ok ? "Замечаний не найдено." : "Не удалось выполнить проверку."}
                 </p>
               )}
-            </div>
+            </Card>
           )}
 
           {result.issues.length > 0 && (
-            <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-zinc-900">Замечания</h2>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-800">
+            <Card>
+              <h2 className="text-sm font-semibold">Замечания</h2>
+              <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm">
                 {result.issues.map((issue, i) => (
                   <li key={`${issue.code}-${i}`}>
-                    {issue.path ? <span className="font-mono text-xs text-zinc-500">{issue.path}: </span> : null}
+                    {issue.path && <span className="font-mono text-xs text-[var(--muted)]">{issue.path}: </span>}
                     {issue.message}
                   </li>
                 ))}
               </ul>
-            </div>
+            </Card>
           )}
 
           {result.printablePreview && (
-            <details className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-              <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
-                Предпросмотр текста по шаблону
-              </summary>
-              <pre className="mt-3 max-h-[480px] overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-xs text-zinc-800">
-                {result.printablePreview}
-              </pre>
-            </details>
+            <Card>
+              <details>
+                <summary className="cursor-pointer text-sm font-semibold">Предпросмотр текста по шаблону</summary>
+                <pre className="mt-3 max-h-120 overflow-auto whitespace-pre-wrap rounded-lg bg-[var(--background)] p-3 text-xs">
+                  {result.printablePreview}
+                </pre>
+              </details>
+            </Card>
           )}
         </div>
       )}
-    </main>
+    </Page>
   );
 }

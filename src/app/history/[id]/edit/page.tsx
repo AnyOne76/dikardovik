@@ -1,39 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { InstructionPayload } from "@/lib/di-contract";
 import { FIXED_SUBORDINATION_LINES, getFinalNoteLines } from "@/lib/di-rules";
+import { Badge, Button, Card, Field, Input, Notice, Page, PageHeader, Textarea } from "@/components/ui";
 
-function NumberedList({ items }: { items: string[] }) {
-  return (
-    <ol className="list-decimal space-y-1.5 pl-5 text-sm text-zinc-700">
-      {items.map((item, idx) => (
-        <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
-      ))}
-    </ol>
-  );
-}
-
-function LabelRow({ label, items }: { label: string; items: string[] }) {
+function PreviewRow({ label, items }: { label: string; items: string[] }) {
   return (
     <tr className="align-top">
-      <td className="w-[34%] border border-orange-100 bg-orange-50/70 p-3 text-sm font-medium text-zinc-800">
+      <th
+        scope="row"
+        className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left text-sm font-medium"
+      >
         {label}
-      </td>
-      <td className="border border-orange-100 bg-white p-3">
-        <NumberedList items={items} />
+      </th>
+      <td className="border-b border-[var(--border)] px-4 py-3">
+        <ol className="list-decimal space-y-1.5 pl-5 text-sm">
+          {items.map((item, idx) => (
+            <li key={`${idx}-${item.slice(0, 20)}`}>{item}</li>
+          ))}
+        </ol>
       </td>
     </tr>
   );
 }
 
-function SectionRow({ title }: { title: string }) {
+function PreviewSection({ title }: { title: string }) {
   return (
     <tr>
       <td
-        className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-2.5 text-center font-bold text-zinc-800"
         colSpan={2}
+        className="border-y border-[var(--border)] bg-[var(--accent-soft)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--accent-strong)]"
       >
         {title}
       </td>
@@ -52,6 +50,45 @@ function textToItems(text: string) {
     .filter(Boolean);
 }
 
+/** Редактируемый раздел: подпись, кнопка перегенерации и поле «строка = пункт». */
+function SectionEditor({
+  label,
+  value,
+  rows,
+  fixed,
+  busy,
+  regenerating,
+  onRegenerate,
+  onChange,
+}: {
+  label: string;
+  value: string[];
+  rows: number;
+  fixed?: boolean;
+  busy: boolean;
+  regenerating: boolean;
+  onRegenerate: () => void;
+  onChange: (next: string[]) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+        <label className="text-sm font-medium">{label}</label>
+        <Button size="sm" disabled={busy || fixed} loading={regenerating} onClick={onRegenerate}>
+          {fixed ? "Зафиксировано" : "Перегенерировать"}
+        </Button>
+      </div>
+      <Textarea
+        rows={rows}
+        value={itemsToText(value)}
+        readOnly={fixed}
+        onChange={(e) => onChange(textToItems(e.target.value))}
+        className={fixed ? "resize-y bg-[var(--background)] text-[var(--muted)]" : "resize-y"}
+      />
+    </div>
+  );
+}
+
 export default function EditHistoryPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -63,17 +100,13 @@ export default function EditHistoryPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState("");
 
   const [baseId, setBaseId] = useState<string | null>(null);
   const [version, setVersion] = useState<number | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
 
   const [payload, setPayload] = useState<InstructionPayload | null>(null);
-
-  const exportHref = useMemo(() => {
-    const exportId = savedId ?? baseId;
-    return exportId ? `/api/di/export/${exportId}` : "#";
-  }, [savedId, baseId]);
 
   useEffect(() => {
     if (!id) return;
@@ -113,6 +146,7 @@ export default function EditHistoryPage() {
     if (!id || !payload) return;
     setSaving(true);
     setError(null);
+    setSaved("");
     try {
       const payloadToSave: InstructionPayload = {
         ...payload,
@@ -131,7 +165,7 @@ export default function EditHistoryPage() {
       if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Ошибка сохранения");
       setSavedId(data.id);
       setVersion(data.version);
-      alert("Сохранено как новая версия.");
+      setSaved(`Сохранено как версия ${data.version}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка сохранения");
     } finally {
@@ -202,363 +236,264 @@ export default function EditHistoryPage() {
     }
   }
 
+  const generalBlocks = payload
+    ? ([
+        {
+          label: "Требуемая квалификация и стаж работы по данной должности",
+          value: payload.sections.general.requiredQualification,
+          section: "requiredQualification",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, general: { ...p.sections.general, requiredQualification: next } },
+          }),
+        },
+        {
+          label: "Подчиненность (только кому подчиняется)",
+          value: FIXED_SUBORDINATION_LINES,
+          section: "subordination",
+          fixed: true,
+          apply: (p: InstructionPayload) => p,
+        },
+        {
+          label: "Прием на работу",
+          value: payload.sections.general.hiringProcedure,
+          section: "hiringProcedure",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, general: { ...p.sections.general, hiringProcedure: next } },
+          }),
+        },
+        {
+          label: "Замещение на время отсутствия",
+          value: payload.sections.general.substitutionProcedure,
+          section: "substitutionProcedure",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, general: { ...p.sections.general, substitutionProcedure: next } },
+          }),
+        },
+        {
+          label: "Нормативные документы, которыми руководствуется в своей деятельности",
+          value: payload.sections.general.regulatoryDocuments,
+          section: "regulatoryDocuments",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, general: { ...p.sections.general, regulatoryDocuments: next } },
+          }),
+        },
+        {
+          label: "Локально-нормативные акты",
+          value: payload.sections.general.localRegulations,
+          section: "localRegulations",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, general: { ...p.sections.general, localRegulations: next } },
+          }),
+        },
+        {
+          label: "Работник должен знать",
+          value: payload.sections.general.employeeMustKnow,
+          section: "employeeMustKnow",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, general: { ...p.sections.general, employeeMustKnow: next } },
+          }),
+        },
+      ] as const)
+    : [];
+
+  const listBlocks = payload
+    ? ([
+        {
+          label: "Работник обязан",
+          value: payload.sections.duties.items,
+          section: "duties.items",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, duties: { ...p.sections.duties, items: next } },
+          }),
+        },
+        {
+          label: "Работник имеет право",
+          value: payload.sections.rights.items,
+          section: "rights.items",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, rights: { ...p.sections.rights, items: next } },
+          }),
+        },
+        {
+          label: "Работник несет ответственность за",
+          value: payload.sections.responsibility.items,
+          section: "responsibility.items",
+          apply: (p: InstructionPayload, next: string[]) => ({
+            ...p,
+            sections: { ...p.sections, responsibility: { ...p.sections.responsibility, items: next } },
+          }),
+        },
+      ] as const)
+    : [];
+
   return (
-    <main className="mx-auto max-w-6xl p-6 text-zinc-900">
-      <section className="rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="inline-flex rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-700">
-              Edit
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900">Редактирование DI</h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              История • версия {version ?? "—"} • можно сохранить как новую версию
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-                  onClick={() => {
-                    // В режиме предпросмотра "Назад" возвращает в редактирование на той же странице.
-                    if (showPreview) setShowPreview(false);
-                    else router.push("/history");
-                  }}
-              className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-700 transition hover:bg-orange-50"
-            >
-              Назад
-            </button>
-            <button
-              type="button"
-              disabled={exporting || exportHref === "#"}
-              onClick={exportDocx}
-              className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {exporting ? "Экспорт..." : "Экспорт DOCX"}
-            </button>
-          </div>
-        </div>
-      </section>
+    <Page>
+      <PageHeader
+        title="Редактирование"
+        subtitle={
+          <span className="inline-flex items-center gap-2">
+            {payload?.templateMeta.positionName ?? "Загрузка..."}
+            {version !== null && <Badge tone="accent">версия {version}</Badge>}
+          </span>
+        }
+        actions={
+          <>
+            <Button onClick={() => (showPreview ? setShowPreview(false) : router.push("/history"))}>Назад</Button>
+            <Button onClick={() => setShowPreview((s) => !s)} disabled={!payload}>
+              {showPreview ? "К редактированию" : "Предпросмотр"}
+            </Button>
+            <Button loading={exporting} disabled={!payload} onClick={exportDocx}>
+              Скачать DOCX
+            </Button>
+            <Button variant="primary" loading={saving} disabled={!payload} onClick={save}>
+              Сохранить версию
+            </Button>
+          </>
+        }
+      />
 
-      {loading && (
-        <p className="mt-4 rounded-2xl border border-orange-100 bg-white p-6 text-center text-sm text-zinc-600 shadow-sm">
-          Загружаем документ...
-        </p>
+      {error && (
+        <div className="mb-4">
+          <Notice tone="error">{error}</Notice>
+        </div>
+      )}
+      {saved && !error && (
+        <div className="mb-4">
+          <Notice tone="success">{saved}</Notice>
+        </div>
       )}
 
-      {!loading && payload && (
-        <div className="mt-4 grid gap-4">
-          {!showPreview && (
-            <section className="rounded-3xl border border-orange-100 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <h2 className="text-lg font-semibold text-zinc-900">Параметры и текст</h2>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => setShowPreview((s) => !s)}
-                  className="inline-flex h-10 items-center rounded-xl border border-orange-200 bg-white px-4 text-sm font-medium text-orange-700 transition hover:bg-orange-50 disabled:opacity-50"
-                >
-                  {showPreview ? "Скрыть предпросмотр" : "Предпросмотр"}
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={save}
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 text-sm font-medium text-white shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {saving ? "Сохраняем..." : "Сохранить как новую версию"}
-                </button>
-              </div>
-            </div>
+      {loading && <div className="h-96 animate-pulse rounded-xl border border-[var(--border)] bg-white" />}
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">Должность</label>
-                <input
-                  readOnly
-                  value={payload.templateMeta.positionName}
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-zinc-700"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">Подразделение</label>
-                <input
-                  value={payload.templateMeta.departmentName}
-                  onChange={(e) =>
-                    setPayload((p) =>
-                      p ? { ...p, templateMeta: { ...p.templateMeta, departmentName: e.target.value } } : p,
-                    )
-                  }
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-                />
-              </div>
-            </div>
+      {!loading && !payload && <Notice tone="error">Не удалось загрузить документ.</Notice>}
 
-            <p className="mt-3 text-xs text-zinc-500">Одна строка в полях = один пункт.</p>
-            {(
-              [
-                {
-                  label: "Требуемая квалификация и стаж работы по данной должности",
-                  value: payload.sections.general.requiredQualification,
-                  section: "requiredQualification",
-                  onChange: (next: string[]) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            sections: {
-                              ...p.sections,
-                              general: { ...p.sections.general, requiredQualification: next },
-                            },
-                          }
-                        : p,
-                    ),
-                },
-                {
-                  label: "Подчиненность (только кому подчиняется)",
-                  value: FIXED_SUBORDINATION_LINES,
-                  section: "subordination",
-                  fixed: true,
-                  onChange: () => undefined,
-                },
-                {
-                  label: "Прием на работу",
-                  value: payload.sections.general.hiringProcedure,
-                  section: "hiringProcedure",
-                  onChange: (next: string[]) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            sections: {
-                              ...p.sections,
-                              general: { ...p.sections.general, hiringProcedure: next },
-                            },
-                          }
-                        : p,
-                    ),
-                },
-                {
-                  label: "Замещение на время отсутствия",
-                  value: payload.sections.general.substitutionProcedure,
-                  section: "substitutionProcedure",
-                  onChange: (next: string[]) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            sections: {
-                              ...p.sections,
-                              general: { ...p.sections.general, substitutionProcedure: next },
-                            },
-                          }
-                        : p,
-                    ),
-                },
-                {
-                  label: "Нормативные документы, которыми руководствуется в своей деятельности",
-                  value: payload.sections.general.regulatoryDocuments,
-                  section: "regulatoryDocuments",
-                  onChange: (next: string[]) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            sections: {
-                              ...p.sections,
-                              general: { ...p.sections.general, regulatoryDocuments: next },
-                            },
-                          }
-                        : p,
-                    ),
-                },
-                {
-                  label: "Локально-нормативные акты",
-                  value: payload.sections.general.localRegulations,
-                  section: "localRegulations",
-                  onChange: (next: string[]) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            sections: {
-                              ...p.sections,
-                              general: { ...p.sections.general, localRegulations: next },
-                            },
-                          }
-                        : p,
-                    ),
-                },
-                {
-                  label: "Работник должен знать",
-                  value: payload.sections.general.employeeMustKnow,
-                  section: "employeeMustKnow",
-                  onChange: (next: string[]) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            sections: {
-                              ...p.sections,
-                              general: { ...p.sections.general, employeeMustKnow: next },
-                            },
-                          }
-                        : p,
-                    ),
-                },
-              ] as const
-            ).map((block) => (
-              <div key={block.label} className="mt-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="block text-sm font-medium text-zinc-700">{block.label}</label>
-                  <button
-                    type="button"
-                    disabled={saving || regenerating === block.section || ("fixed" in block && block.fixed)}
-                    onClick={() => regenerate(block.section)}
-                    className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:opacity-50"
-                  >
-                    {"fixed" in block && block.fixed
-                      ? "Зафиксировано"
-                      : regenerating === block.section
-                        ? "Перегенерируем..."
-                        : "Перегенерировать"}
-                  </button>
-                </div>
-                <textarea
-                  rows={4}
-                  value={itemsToText(block.value)}
-                  readOnly={"fixed" in block && block.fixed}
-                  onChange={(e) => block.onChange(textToItems(e.target.value))}
-                  className={`w-full resize-y rounded-xl border border-zinc-200 px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none ${
-                    "fixed" in block && block.fixed ? "bg-zinc-50 text-zinc-600" : "bg-white"
-                  }`}
-                />
-              </div>
+      {!loading && payload && !showPreview && (
+        <Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Должность">
+              <Input readOnly value={payload.templateMeta.positionName} className="bg-[var(--background)]" />
+            </Field>
+            <Field label="Подразделение">
+              <Input
+                value={payload.templateMeta.departmentName}
+                onChange={(e) =>
+                  setPayload((p) =>
+                    p ? { ...p, templateMeta: { ...p.templateMeta, departmentName: e.target.value } } : p,
+                  )
+                }
+              />
+            </Field>
+          </div>
+
+          <p className="mt-4 text-xs text-[var(--muted)]">Одна строка в поле — один пункт документа.</p>
+
+          <div className="mt-4 space-y-5">
+            {generalBlocks.map((block) => (
+              <SectionEditor
+                key={block.section}
+                label={block.label}
+                value={block.value}
+                rows={4}
+                fixed={"fixed" in block && block.fixed}
+                busy={saving || regenerating !== null}
+                regenerating={regenerating === block.section}
+                onRegenerate={() => void regenerate(block.section)}
+                onChange={(next) => setPayload((p) => (p ? block.apply(p, next) : p))}
+              />
             ))}
-
-            <div className="mt-6 grid gap-4">
-              {[
-                { label: "Работник обязан", value: payload.sections.duties.items, section: "duties.items" as const, key: "duties.items" as const },
-                { label: "Работник имеет право", value: payload.sections.rights.items, section: "rights.items" as const, key: "rights.items" as const },
-                {
-                  label: "Работник несет ответственность за",
-                  value: payload.sections.responsibility.items,
-                  section: "responsibility.items" as const,
-                  key: "responsibility.items" as const,
-                },
-              ].map((block) => (
-                <div key={block.key}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="block text-sm font-medium text-zinc-700">{block.label}</label>
-                    <button
-                      type="button"
-                      disabled={saving || regenerating === block.section}
-                      onClick={() => regenerate(block.section)}
-                      className="inline-flex h-9 items-center rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-medium text-orange-800 transition hover:bg-orange-100 disabled:opacity-50"
-                    >
-                      {regenerating === block.section ? "Перегенерируем..." : "Перегенерировать"}
-                    </button>
-                  </div>
-                  <textarea
-                    rows={6}
-                    value={itemsToText(block.value)}
-                    onChange={(e) => {
-                      const next = textToItems(e.target.value);
-                      setPayload((p) => {
-                        if (!p) return p;
-                        if (block.key === "duties.items") {
-                          return { ...p, sections: { ...p.sections, duties: { ...p.sections.duties, items: next } } };
-                        }
-                        if (block.key === "rights.items") {
-                          return { ...p, sections: { ...p.sections, rights: { ...p.sections.rights, items: next } } };
-                        }
-                        return {
-                          ...p,
-                          sections: {
-                            ...p.sections,
-                            responsibility: { ...p.sections.responsibility, items: next },
-                          },
-                        };
-                      });
-                    }}
-                    className="w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {error && <p className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-          </section>
-          )}
-
-          {showPreview && (
-            <section className="rounded-3xl border border-orange-100 bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.05)]">
-              <div className="overflow-x-auto rounded-xl border border-orange-100">
-                <table className="w-full border-collapse text-sm">
-                  <tbody>
-                    <tr>
-                      <td
-                        className="border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 p-2.5 text-center text-base font-bold tracking-[0.3em] text-zinc-800"
-                        colSpan={2}
-                      >
-                        ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
-                      </td>
-                    </tr>
-                    <tr className="align-top">
-                      <td className="w-[34%] border border-orange-100 bg-orange-50/70 p-3 font-medium">
-                        Название штатной должности
-                      </td>
-                      <td className="border border-orange-100 p-3">{payload.templateMeta.positionName}</td>
-                    </tr>
-                    <tr className="align-top">
-                      <td className="border border-orange-100 bg-orange-50/70 p-3 font-medium">
-                        Наименование структурного подразделения
-                      </td>
-                      <td className="border border-orange-100 p-3">{payload.templateMeta.departmentName}</td>
-                    </tr>
-
-                    <SectionRow title={payload.sections.general.heading} />
-                    <LabelRow label="Требуемая квалификация и стаж работы по данной должности" items={payload.sections.general.requiredQualification} />
-                    <LabelRow label="Подчиненность" items={payload.sections.general.subordination} />
-                    <LabelRow label="Прием на работу" items={payload.sections.general.hiringProcedure} />
-                    <LabelRow label="Замещение на время отсутствия" items={payload.sections.general.substitutionProcedure} />
-                    <LabelRow
-                      label="Нормативные документы, которыми руководствуется в своей деятельности"
-                      items={payload.sections.general.regulatoryDocuments}
-                    />
-                    <LabelRow label="Локально-нормативные акты" items={payload.sections.general.localRegulations} />
-                    <LabelRow label="Работник должен знать" items={payload.sections.general.employeeMustKnow} />
-
-                    <SectionRow title={payload.sections.duties.heading} />
-                    <LabelRow label="Работник обязан" items={payload.sections.duties.items} />
-
-                    <SectionRow title={payload.sections.rights.heading} />
-                    <LabelRow label="Работник имеет право" items={payload.sections.rights.items} />
-
-                    <SectionRow title={payload.sections.responsibility.heading} />
-                    <LabelRow label="Работник несет ответственность за" items={payload.sections.responsibility.items} />
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4 text-sm text-zinc-700">
-                {getFinalNoteLines(payload.templateMeta.positionName).map((line, idx) => (
-                  <p key={`${idx}-${line.slice(0, 20)}`} className={idx > 0 ? "mt-2" : ""}>
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+            {listBlocks.map((block) => (
+              <SectionEditor
+                key={block.section}
+                label={block.label}
+                value={block.value}
+                rows={8}
+                busy={saving || regenerating !== null}
+                regenerating={regenerating === block.section}
+                onRegenerate={() => void regenerate(block.section)}
+                onChange={(next) => setPayload((p) => (p ? block.apply(p, next) : p))}
+              />
+            ))}
+          </div>
+        </Card>
       )}
 
-      {!loading && !payload && (
-        <p className="mt-4 rounded-2xl border border-red-100 bg-white p-6 text-center text-sm text-red-700 shadow-sm">
-          Не удалось загрузить документ.
-        </p>
+      {!loading && payload && showPreview && (
+        <Card className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <caption className="border-b border-[var(--border)] px-4 py-3 text-center text-sm font-semibold tracking-[0.2em]">
+                ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ
+              </caption>
+              <tbody>
+                <tr className="align-top">
+                  <th
+                    scope="row"
+                    className="w-[32%] border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium"
+                  >
+                    Название штатной должности
+                  </th>
+                  <td className="border-b border-[var(--border)] px-4 py-3">{payload.templateMeta.positionName}</td>
+                </tr>
+                <tr className="align-top">
+                  <th
+                    scope="row"
+                    className="border-b border-[var(--border)] bg-[var(--background)] px-4 py-3 text-left font-medium"
+                  >
+                    Наименование структурного подразделения
+                  </th>
+                  <td className="border-b border-[var(--border)] px-4 py-3">{payload.templateMeta.departmentName}</td>
+                </tr>
+
+                <PreviewSection title={payload.sections.general.heading} />
+                <PreviewRow
+                  label="Требуемая квалификация и стаж работы по данной должности"
+                  items={payload.sections.general.requiredQualification}
+                />
+                <PreviewRow label="Подчиненность" items={payload.sections.general.subordination} />
+                <PreviewRow label="Прием на работу" items={payload.sections.general.hiringProcedure} />
+                <PreviewRow
+                  label="Замещение на время отсутствия"
+                  items={payload.sections.general.substitutionProcedure}
+                />
+                <PreviewRow
+                  label="Нормативные документы, которыми руководствуется в своей деятельности"
+                  items={payload.sections.general.regulatoryDocuments}
+                />
+                <PreviewRow label="Локально-нормативные акты" items={payload.sections.general.localRegulations} />
+                <PreviewRow label="Работник должен знать" items={payload.sections.general.employeeMustKnow} />
+
+                <PreviewSection title={payload.sections.duties.heading} />
+                <PreviewRow label="Работник обязан" items={payload.sections.duties.items} />
+
+                <PreviewSection title={payload.sections.rights.heading} />
+                <PreviewRow label="Работник имеет право" items={payload.sections.rights.items} />
+
+                <PreviewSection title={payload.sections.responsibility.heading} />
+                <PreviewRow
+                  label="Работник несет ответственность за"
+                  items={payload.sections.responsibility.items}
+                />
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border-t border-[var(--border)] bg-[var(--background)] p-5 text-sm text-[var(--muted)]">
+            {getFinalNoteLines(payload.templateMeta.positionName).map((line, idx) => (
+              <p key={`${idx}-${line.slice(0, 20)}`} className={idx > 0 ? "mt-2" : ""}>
+                {line}
+              </p>
+            ))}
+          </div>
+        </Card>
       )}
-    </main>
+    </Page>
   );
 }
-

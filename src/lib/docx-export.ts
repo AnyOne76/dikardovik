@@ -16,7 +16,6 @@ import {
   WidthType,
 } from "docx";
 import { fixedHeaders, type InstructionPayload } from "@/lib/di-contract";
-import { getResolvedApiConfig } from "@/lib/api-settings";
 import { applyTripleTextQuality } from "@/lib/di-text-quality";
 import { getLegalEntity, type LegalEntity } from "@/lib/legal-entities";
 import { getCurrentDirectorName } from "@/lib/directors";
@@ -388,8 +387,12 @@ function acknowledgementBlock() {
 }
 
 export async function exportInstructionToDocx(payload: InstructionPayload): Promise<Buffer> {
-  const resolved = await getResolvedApiConfig();
-  const safePayload = await applyTripleTextQuality(payload, { resolvedApi: resolved });
+  // Текст уже прошёл полную тройную вычитку (включая редакторский проход LLM)
+  // там, где он создавался или менялся: генерация, импорт, регенерация раздела,
+  // доработка по замечаниям и сохранение версии. Повторять её на каждом
+  // скачивании — это лишний запрос к DeepSeek на десятки секунд, поэтому здесь
+  // оставляем только быструю часть: нормализацию и орфографию.
+  const safePayload = await applyTripleTextQuality(payload, { skipLlmProofread: true });
   const entity = getLegalEntity(safePayload.templateMeta.legalEntityId);
   const directorName = await getCurrentDirectorName(entity.id);
   const logoData = entity.showBrandMark ? await readFile(LOGO_PATH).catch(() => null) : null;
