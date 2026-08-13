@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { assertStrictStructure, instructionSchema, toPrintableText } from "@/lib/di-contract";
 import { getResolvedApiConfig } from "@/lib/api-settings";
 import { fetchPerplexityFacts } from "@/lib/perplexity";
-import { generateInstructionPayload } from "@/lib/openrouter";
+import { generateInstructionPayload, MissingLlmApiKeyError } from "@/lib/openrouter";
 import { normalizeJobTitle } from "@/lib/normalize";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -58,7 +58,15 @@ export async function POST(request: Request) {
     const apiConfig = await getResolvedApiConfig();
     let perplexity: { model: string; snippets: string[] } = { model: "unavailable", snippets: [] };
     try {
-      perplexity = await fetchPerplexityFacts(jobTitle, apiConfig);
+      perplexity = await fetchPerplexityFacts(
+        {
+          jobTitle,
+          department,
+          companyLabel: legalEntity.label,
+          companyContext: legalEntity.companyContext,
+        },
+        apiConfig,
+      );
     } catch (factsError) {
       // External search must not break DI generation pipeline.
       console.warn("Facts collection failed, fallback to generation without facts", factsError);
@@ -69,6 +77,8 @@ export async function POST(request: Request) {
         jobTitle,
         department,
         legalEntityId,
+        companyLabel: legalEntity.label,
+        companyContext: legalEntity.companyContext,
         facts: perplexity.snippets.slice(0, 90),
         relatedContext: related.flatMap((r) => r.versions.map((v) => v.finalText.slice(0, 400))),
       },
@@ -156,8 +166,10 @@ export async function POST(request: Request) {
       console.error("Failed to persist generation error", updateError);
     }
     return NextResponse.json(
-      { error: "Не удалось сформировать документ. Попробуйте еще раз позже.", errorId: run.id },
-      { status: 500 },
+      error instanceof MissingLlmApiKeyError
+        ? { error: error.message, errorId: run.id }
+        : { error: "Не удалось сформировать документ. Попробуйте еще раз позже.", errorId: run.id },
+      { status: error instanceof MissingLlmApiKeyError ? 503 : 500 },
     );
   }
 }

@@ -13,10 +13,19 @@ import {
 
 loadEnvConfig(process.cwd());
 
+export class MissingLlmApiKeyError extends Error {
+  constructor() {
+    super("Не задан API-ключ DeepSeek. Укажите его в разделе «Настройки API» или в OPENROUTER_API_KEY.");
+    this.name = "MissingLlmApiKeyError";
+  }
+}
+
 type GenerationInput = {
   jobTitle: string;
   department: string;
   legalEntityId: string;
+  companyLabel?: string;
+  companyContext?: string;
   facts: string[];
   relatedContext: string[];
 };
@@ -301,12 +310,7 @@ export async function generateInstructionPayload(
     resolved ?? (await getResolvedApiConfig());
   const apiKey = apiKeyRaw?.trim() || undefined;
   if (!apiKey) {
-    const local = ensureSectionItems(fallbackPayload(input), input);
-    const refined = await applyTripleTextQuality(local, {
-      resolvedApi: resolved ?? (await getResolvedApiConfig()),
-      skipLlmProofread: true,
-    });
-    return { payload: refined, model };
+    throw new MissingLlmApiKeyError();
   }
 
   const prompt = `Сформируй JSON строго по схеме должностной инструкции с неизменными заголовками секций.
@@ -332,6 +336,9 @@ export async function generateInstructionPayload(
 }
 Должность: ${input.jobTitle}
 Подразделение: ${input.department}
+Юридическое лицо: ${input.companyLabel ?? input.legalEntityId}
+Контекст организации: ${input.companyContext ?? "—"}
+Учитывай профиль юридического лица и подразделения: не смешивай IT, ритейл и производство без необходимости.
 Факты: ${input.facts.join("; ")}
 Связанный контекст: ${input.relatedContext.join("; ")}
 Верни ТОЛЬКО JSON без пояснений.

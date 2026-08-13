@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (не коммитить секреты; пример окружения — .env.example)
 .env
+.env.save
+.env*.save
 .env.local
 .env.development.local
 .env.test.local

@@ -31,7 +31,18 @@ const FONT_SIZE = 20;
 const PAGE_MARGIN = 1_134;
 const PAGE_TOP_MARGIN = 567;
 const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-const LOGO_PATH = join(process.cwd(), "03 лого-контурный-3.png");
+const LOGO_CANDIDATES = [
+  join(process.cwd(), "03 лого-контурный-3.png"),
+  join(process.cwd(), "public", "myasnitsky-logo-v2.png"),
+];
+
+async function readBrandLogo(): Promise<Buffer | null> {
+  for (const candidate of LOGO_CANDIDATES) {
+    const data = await readFile(candidate).catch(() => null);
+    if (data?.length) return data;
+  }
+  return null;
+}
 
 function para(
   text: string,
@@ -395,7 +406,7 @@ export async function exportInstructionToDocx(payload: InstructionPayload): Prom
   const safePayload = await applyTripleTextQuality(payload, { skipLlmProofread: true });
   const entity = getLegalEntity(safePayload.templateMeta.legalEntityId);
   const directorName = await getCurrentDirectorName(entity.id);
-  const logoData = entity.showBrandMark ? await readFile(LOGO_PATH).catch(() => null) : null;
+  const logoData = entity.showBrandMark ? await readBrandLogo() : null;
   const doc = new Document({
     sections: [
       {

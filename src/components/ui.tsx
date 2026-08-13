@@ -152,20 +152,26 @@ export function TimedProgress({
   tau = 30,
   stages,
   compact = false,
+  startedAtMs,
   className,
 }: {
   tau?: number;
   stages?: { until: number; label: string }[];
   compact?: boolean;
+  /** Момент начала работы. Нужен, когда страницу перезагрузили посреди процесса:
+   *  отсчёт должен продолжиться, а не начаться заново. */
+  startedAtMs?: number;
   className?: string;
 }) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    const start = Date.now();
-    const timer = setInterval(() => setElapsed((Date.now() - start) / 1000), 250);
+    const start = startedAtMs ?? Date.now();
+    const tick = () => setElapsed((Date.now() - start) / 1000);
+    tick();
+    const timer = setInterval(tick, 250);
     return () => clearInterval(timer);
-  }, []);
+  }, [startedAtMs]);
 
   const percent = 95 * (1 - Math.exp(-elapsed / tau));
   const stage = stages?.find((s) => elapsed < s.until)?.label ?? stages?.[stages.length - 1]?.label;

@@ -237,17 +237,19 @@ export default function EditHistoryPage() {
     setRegenerating(section);
     setError(null);
     try {
-      const r = await fetch(`/api/di/history/${id}/regenerate`, {
+      const r = await fetch("/api/di/regenerate-section", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ section, templateJson: payload }),
+        body: JSON.stringify({ id, section, templateJson: payload }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Ошибка перегенерации");
       if (data.templateJson) setPayload(data.templateJson as InstructionPayload);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка перегенерации");
+      const message = e instanceof Error ? e.message : "Ошибка перегенерации";
+      setError(message);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setRegenerating(null);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getFinalNoteLines } from "@/lib/di-rules";
 import { DEFAULT_LEGAL_ENTITY_ID, LEGAL_ENTITIES, getLegalEntity } from "@/lib/legal-entities";
 import {
@@ -103,6 +103,10 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Метка «в этой вкладке запущена генерация» — переживает перезагрузку страницы. */
+const PENDING_KEY = "di:generating-since";
+const PENDING_TTL_MS = 20 * 60 * 1000;
+
 export default function HomePage() {
   const [jobTitle, setJobTitle] = useState("");
   const [legalEntityId, setLegalEntityId] = useState(DEFAULT_LEGAL_ENTITY_ID);
@@ -112,6 +116,71 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [error, setError] = useState("");
+  const [restoredStartedAt, setRestoredStartedAt] = useState<number | null>(null);
+
+  /*
+   * Генерация висит одним длинным запросом, а её результат пишется в базу
+   * независимо от того, дождался ли браузер ответа. Поэтому при загрузке
+   * страницы мы спрашиваем сервер, не идёт ли (и не завершилась ли) генерация,
+   * начатая до перезагрузки, и подхватываем её.
+   */
+  useEffect(() => {
+    const since = Number(localStorage.getItem(PENDING_KEY) ?? 0);
+    if (!since || Date.now() - since > PENDING_TTL_MS) {
+      localStorage.removeItem(PENDING_KEY);
+      return;
+    }
+
+    let stop = false;
+
+    async function poll() {
+      while (!stop) {
+        try {
+          const r = await fetch("/api/di/generate/state", { credentials: "include" });
+          const d = await r.json();
+          if (!r.ok) throw new Error("state");
+
+          if (d.state === "running") {
+            setLoading(true);
+            setRestoredStartedAt(new Date(d.startedAt).getTime());
+          } else if (d.state === "done") {
+            setResult(d as GenerateResponse);
+            setLoading(false);
+            setRestoredStartedAt(null);
+            localStorage.removeItem(PENDING_KEY);
+            return;
+          } else if (d.state === "failed") {
+            setError(String(d.error ?? "Не удалось сформировать документ."));
+            setLoading(false);
+            setRestoredStartedAt(null);
+            localStorage.removeItem(PENDING_KEY);
+            return;
+          } else {
+            setLoading(false);
+            setRestoredStartedAt(null);
+            localStorage.removeItem(PENDING_KEY);
+            return;
+          }
+        } catch {
+          // Разрыв связи не должен рушить страницу — пробуем на следующем круге.
+        }
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+
+    void poll();
+    return () => {
+      stop = true;
+    };
+  }, []);
+
+  // Пока идёт генерация, случайная перезагрузка не должна проходить молча.
+  useEffect(() => {
+    if (!loading) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [loading]);
 
   const canSubmit = useMemo(() => {
     if (loading) return false;
@@ -132,6 +201,7 @@ export default function HomePage() {
   async function generate() {
     setError("");
     setLoading(true);
+    localStorage.setItem(PENDING_KEY, String(Date.now()));
     try {
       const resp = await fetch("/api/di/generate", {
         method: "POST",
@@ -144,6 +214,7 @@ export default function HomePage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка");
     } finally {
+      localStorage.removeItem(PENDING_KEY);
       setLoading(false);
     }
   }
@@ -164,7 +235,7 @@ export default function HomePage() {
           <div className="space-y-4">
             <Field label="Должность или специальность">
               <Input
-                placeholder="Например: системный аналитик"
+                placeholder="Например: главный бухгалтер"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
               />
@@ -203,7 +274,20 @@ export default function HomePage() {
               {loading ? "Формируем документ..." : "Сформировать ДИ"}
             </Button>
 
-            {loading && <TimedProgress tau={30} stages={GENERATION_STAGES} />}
+            {loading && (
+              <div className="space-y-2">
+                <TimedProgress
+                  tau={30}
+                  stages={GENERATION_STAGES}
+                  startedAtMs={restoredStartedAt ?? undefined}
+                />
+                {restoredStartedAt !== null && (
+                  <p className="text-xs text-zinc-500">
+                    Генерация была запущена до перезагрузки страницы и продолжается на сервере.
+                  </p>
+                )}
+              </div>
+            )}
             {error && <Notice tone="error">{error}</Notice>}
           </div>
         </Card>

@@ -17,11 +17,15 @@ echo "==> Updating code ($REMOTE/$BRANCH) in $APP_DIR"
 git fetch "$REMOTE" "$BRANCH"
 git reset --hard "$REMOTE/$BRANCH"
 
+echo "==> Checking production environment"
+NODE_ENV=production npm run check:prod-env
+
 echo "==> Installing dependencies (npm ci)"
 npm ci --maxsockets=1
 
 echo "==> Applying database migrations"
 npm run db:deploy
+npm run db:ensure-admin
 
 echo "==> Building production bundle"
 npm run build

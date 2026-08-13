@@ -111,14 +111,42 @@ async function queryPerplexity(apiKey: string, model: string, prompt: string): P
   return normalizeLines(content);
 }
 
+function companyPromptLines(companyLabel?: string, companyContext?: string): string[] {
+  const label = companyLabel?.trim();
+  const context = companyContext?.trim();
+  if (!label && !context) return [];
+  const lines = [
+    label ? `Работодатель / юридическое лицо: ${label}.` : "",
+    context ? `Контекст организации: ${context}` : "",
+    "Формулировки должны соответствовать профилю этой организации и выбранного подразделения, а не быть универсальными «для любой компании».",
+    "Не добавляй обязанности и знания, противоречащие профилю организации (например, производственные операции мясокомбината для IT-компании или IT-разработку для чисто административно-инженерного контура).",
+  ];
+  return lines.filter(Boolean);
+}
+
 export async function fetchPerplexityFacts(
-  jobTitle: string,
+  opts: {
+    jobTitle: string;
+    department: string;
+    companyLabel?: string;
+    companyContext?: string;
+  },
   resolved?: ResolvedApiConfig,
 ): Promise<PerplexityResult> {
+  const { jobTitle, department } = opts;
+  const departmentLabel = department.trim();
+  const roleContext = departmentLabel
+    ? `должности "${jobTitle}" в структурном подразделении "${departmentLabel}"`
+    : `должности "${jobTitle}"`;
+  const orgLines = companyPromptLines(opts.companyLabel, opts.companyContext);
+
   const { perplexityApiKey: apiKeyRaw, perplexityModel: model } =
     resolved ?? (await getResolvedApiConfig());
   const apiKey = apiKeyRaw.trim();
-  const assistentusLines = await fetchAssistentusFacts(`должностная инструкция ${jobTitle}`).catch(() => []);
+  const searchQuery = departmentLabel
+    ? `должностная инструкция ${jobTitle} ${departmentLabel}`
+    : `должностная инструкция ${jobTitle}`;
+  const assistentusLines = await fetchAssistentusFacts(searchQuery).catch(() => []);
   const targetCount = 90;
   const minAssistentusOnly = 40;
 
@@ -134,7 +162,9 @@ export async function fetchPerplexityFacts(
         apiKey,
         model,
         [
-          `Собери данные для должности "${jobTitle}" в РФ.`,
+          `Собери данные для ${roleContext} в РФ.`,
+          "Учитывай и должность, и структурное подразделение: формулировки должны соответствовать контексту подразделения.",
+          ...orgLines,
           "Ориентируйся на российские квалификационные справочники (ЕКС/ЕТКС) и профстандарты, где применимо.",
           "Нужны пункты для раздела 1. ОБЩИЕ ПОЛОЖЕНИЯ:",
           "- Требуемая квалификация и стаж",
@@ -151,7 +181,9 @@ export async function fetchPerplexityFacts(
         apiKey,
         model,
         [
-          `Собери данные для должности "${jobTitle}" в РФ.`,
+          `Собери данные для ${roleContext} в РФ.`,
+          "Учитывай и должность, и структурное подразделение: формулировки должны соответствовать контексту подразделения.",
+          ...orgLines,
           "Ориентируйся на российские квалификационные справочники (ЕКС/ЕТКС) и профстандарты, где применимо.",
           "Нужны пункты для разделов:",
           "- 2. ДОЛЖНОСТНЫЕ ОБЯЗАННОСТИ (минимум 35 строк)",
@@ -180,17 +212,26 @@ export async function fetchPerplexityFacts(
 export async function fetchPerplexityFactsForSection(
   opts: {
     jobTitle: string;
-    department?: string;
+    department: string;
     sectionHuman: string;
     desiredCount: number;
+    companyLabel?: string;
+    companyContext?: string;
   },
   resolved?: ResolvedApiConfig,
 ): Promise<PerplexityResult> {
   const { perplexityApiKey: apiKeyRaw, perplexityModel: model } =
     resolved ?? (await getResolvedApiConfig());
   const apiKey = apiKeyRaw.trim();
+  const departmentLabel = opts.department.trim();
+  const roleContext = departmentLabel
+    ? `должности "${opts.jobTitle}" в структурном подразделении "${departmentLabel}"`
+    : `должности "${opts.jobTitle}"`;
+  const orgLines = companyPromptLines(opts.companyLabel, opts.companyContext);
 
-  const query = `должностная инструкция ${opts.jobTitle}${opts.department ? ` ${opts.department}` : ""}`;
+  const query = departmentLabel
+    ? `должностная инструкция ${opts.jobTitle} ${departmentLabel}`
+    : `должностная инструкция ${opts.jobTitle}`;
   const assistentusLines = await fetchAssistentusFacts(query).catch(() => []);
 
   const targetCount = Math.max(opts.desiredCount + 6, opts.desiredCount);
@@ -207,8 +248,10 @@ export async function fetchPerplexityFactsForSection(
     apiKey,
     model,
     (() => {
-      const base = [
-        `Собери данные для должности "${opts.jobTitle}" в структурном подразделении "${opts.department ?? ""}".`,
+      const promptLines = [
+        `Собери данные для ${roleContext} в РФ.`,
+        "Учитывай и должность, и структурное подразделение: формулировки должны соответствовать контексту подразделения.",
+        ...orgLines,
         "Ориентируйся на российские квалификационные справочники (ЕКС/ЕТКС) и профстандарты, где применимо.",
         `Нужны пункты для секции: ${opts.sectionHuman}`,
         `Верни МИНИМУМ ${targetCount} отдельных строк.`,
@@ -224,17 +267,17 @@ export async function fetchPerplexityFactsForSection(
         s.includes("duties");
 
       if (isDuties) {
-        base.push(
-          "Фокус: должностные обязанности (функциональные обязанности) по этой должности в РФ.",
+        promptLines.push(
+          "Фокус: должностные обязанности (функциональные обязанности) по этой должности в данном подразделении в РФ.",
           "Пункты должны быть в форме действий (глагол + объект), максимально прикладные и разнообразные.",
           "По возможности добавь: документация/отчётность, взаимодействие с подразделениями, контроль сроков/качества, охрана труда/ПБ (если уместно).",
           "Не добавляй обязанности, противоречащие роли (например, для офисной должности не вставляй производственные операции).",
         );
       } else {
-        base.push("Если в источнике встречаются формулировки 'подчиняется', не подставляй смысл наоборот.");
+        promptLines.push("Если в источнике встречаются формулировки 'подчиняется', не подставляй смысл наоборот.");
       }
 
-      return base.join("\n");
+      return promptLines.join("\n");
     })(),
   ).catch(() => []);
 

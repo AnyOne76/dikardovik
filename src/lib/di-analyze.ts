@@ -12,6 +12,7 @@ import { patchEmptyInstructionLists } from "@/lib/di-rules";
 import { fetchPerplexityFactsForSection } from "@/lib/perplexity";
 import { DEEPSEEK_CHAT_URL, buildDeepseekBody, extractDeepseekText } from "@/lib/deepseek";
 import { getResolvedApiConfig } from "@/lib/api-settings";
+import { getLegalEntity } from "@/lib/legal-entities";
 
 loadEnvConfig(process.cwd());
 
@@ -513,6 +514,7 @@ export async function checkComplianceEksEtks(payload: InstructionPayload): Promi
 
   const jobTitle = payload.templateMeta.positionName;
   const department = payload.templateMeta.departmentName;
+  const legalEntity = getLegalEntity(payload.templateMeta.legalEntityId);
 
   // Pull “normative-oriented” snippets via Sonar for key areas.
   let sonarModel = resolved.perplexityModel;
@@ -520,18 +522,24 @@ export async function checkComplianceEksEtks(payload: InstructionPayload): Promi
     fetchPerplexityFactsForSection({
       jobTitle,
       department,
+      companyLabel: legalEntity.label,
+      companyContext: legalEntity.companyContext,
       sectionHuman: "Требуемая квалификация и стаж работы по данной должности (ориентир: ЕКС/ЕТКС/профстандарты)",
       desiredCount: 20,
     }).catch(() => ({ snippets: [], model: sonarModel })),
     fetchPerplexityFactsForSection({
       jobTitle,
       department,
+      companyLabel: legalEntity.label,
+      companyContext: legalEntity.companyContext,
       sectionHuman: "Работник должен знать (ориентир: ЕКС/ЕТКС/профстандарты)",
       desiredCount: 24,
     }).catch(() => ({ snippets: [], model: sonarModel })),
     fetchPerplexityFactsForSection({
       jobTitle,
       department,
+      companyLabel: legalEntity.label,
+      companyContext: legalEntity.companyContext,
       sectionHuman: "Работник обязан (функциональные обязанности; ориентир: ЕКС/ЕТКС/профстандарты)",
       desiredCount: 35,
     }).catch(() => ({ snippets: [], model: sonarModel })),

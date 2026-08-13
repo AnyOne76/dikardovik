@@ -9,15 +9,15 @@ import {
 } from "@/lib/di-regenerate-section";
 import { getClientIp } from "@/lib/request-meta";
 
-/** @deprecated Используйте POST /api/di/regenerate-section — вложенный маршрут нестабилен в Next.js 16. */
-export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await ctx.params;
-  const body = await request.json().catch(() => ({} as { section?: unknown; templateJson?: unknown }));
+  const body = await request.json().catch(() => ({} as { id?: unknown; section?: unknown; templateJson?: unknown }));
+  const id = String(body?.id || "").trim();
   const section = String(body?.section || "").trim() as RegenerateSectionKey;
 
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
   if (!REGENERATE_SECTION_KEYS.includes(section)) {
     return NextResponse.json({ error: "Invalid section" }, { status: 400 });
   }
@@ -36,7 +36,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     if (error instanceof RegenerateSectionError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error("regenerate failed", error);
+    console.error("regenerate-section failed", error);
     return NextResponse.json({ error: "Не удалось перегенерировать раздел" }, { status: 500 });
   }
 }

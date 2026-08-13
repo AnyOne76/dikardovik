@@ -16,6 +16,12 @@ async function main() {
 
   const login = process.env.SEED_ADMIN_LOGIN ?? "hr-admin";
   const password = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!";
+  if (process.env.NODE_ENV === "production" && password === "ChangeMe123!") {
+    console.error(
+      "Отказ создать админа с паролем по умолчанию (ChangeMe123!). Задайте SEED_ADMIN_PASSWORD в .env.",
+    );
+    process.exit(1);
+  }
   const hash = await bcrypt.hash(password, 10);
 
   await prisma.user.upsert({
