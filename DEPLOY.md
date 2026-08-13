@@ -35,7 +35,7 @@ cp .env.example .env
 ```env
 DATABASE_URL="file:/app/data/prod.db"
 NEXTAUTH_SECRET="<сгенерированный секрет>"
-NEXTAUTH_URL="http://IP_ИЛИ_ДОМЕН:25531"
+NEXTAUTH_URL="http://10.0.5.173:25531"
 AUTH_TRUST_HOST=true
 SEED_ADMIN_LOGIN="hr-admin"
 SEED_ADMIN_PASSWORD="<свой пароль>"
@@ -45,7 +45,7 @@ PERPLEXITY_API_KEY="<ключ Perplexity>"
 PERPLEXITY_MODEL="sonar-pro"
 ```
 
-`NEXTAUTH_URL` должен **совпадать** с тем, что люди вводят в браузере (не путать `localhost` и IP).
+`NEXTAUTH_URL` должен **совпадать** с тем, что люди вводят в браузере: `http://10.0.5.173:25531` (без слэша в конце).
 
 Проверка окружения:
 

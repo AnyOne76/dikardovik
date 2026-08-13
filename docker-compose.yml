@@ -1,6 +1,6 @@
 # Кадровик DI — один контейнер, SQLite в volume, порт 25531.
 # Перед запуском: cp .env.example .env и заполнить по DEPLOY.md
-#   NEXTAUTH_URL = точный адрес из браузера
+#   NEXTAUTH_URL = http://10.0.5.173:25531
 #   NEXTAUTH_SECRET = openssl rand -base64 32
 #   SEED_ADMIN_PASSWORD ≠ ChangeMe123!
 #   OPENROUTER_API_KEY = ключ DeepSeek
@@ -10,14 +10,14 @@ services:
     build:
       context: .
       args:
-        NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:25531}
+        NEXTAUTH_URL: ${NEXTAUTH_URL:-http://10.0.5.173:25531}
     ports:
       - "25531:3000"
     env_file:
       - .env
     environment:
       DATABASE_URL: file:/app/data/prod.db
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:25531}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://10.0.5.173:25531}
       AUTH_TRUST_HOST: "true"
       NODE_ENV: production
     volumes:

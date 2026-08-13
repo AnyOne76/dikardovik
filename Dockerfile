@@ -13,7 +13,7 @@ RUN npx prisma generate
 
 COPY . .
 # Публичный URL для NextAuth и прокси (совпадает с портом в docker-compose).
-ARG NEXTAUTH_URL=http://localhost:25531
+ARG NEXTAUTH_URL=http://10.0.5.173:25531
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV AUTH_TRUST_HOST=true
 RUN npm run build
